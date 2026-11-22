@@ -78,7 +78,9 @@ VeSync app. `card.py` serves it at `/vesync_extended/vesync-humidifier-card.js`
 and loads it on every dashboard with `?v=<manifest version>`, so bump the
 manifest version when the card changes. It finds the other entities on the
 humidifier's device by translation key. Config: `entity` (required),
-`target_humidity_entity`, `humidity_entity` (the ring reading), `name`, and
+`target_humidity_entity`, `humidity_entity` (the ring reading), `name`,
+`layout` (`full`, `compact`, or `expandable`: compact with a chevron to open
+the full card; the open state isn't saved), and
 overrides such as `filter_entity`. It has a visual editor (`ha-form`). It uses
 the theme's card background and text colours (the owner didn't want the app's
 blue background). The owner's Home view uses it with

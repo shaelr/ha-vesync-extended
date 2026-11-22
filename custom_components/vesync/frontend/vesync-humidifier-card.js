@@ -6,6 +6,7 @@
  *   target_humidity_entity: input_number.target_humidity   # optional
  *   name: Humidifier                                       # optional
  *   humidity_entity: sensor.average_humidity               # optional, ring reading
+ *   layout: full | compact | expandable                    # optional, default full
  *
  * The other entities (mist level, filter, timer, drying ...) are found on the
  * same device by their translation key, so renamed entity ids keep working.
@@ -14,7 +15,7 @@
  * Served by the VeSync Extended integration; no separate install needed.
  */
 
-const CARD_VERSION = "1.1.0";
+const CARD_VERSION = "1.2.0";
 
 // card config key -> [domain, translation_key]
 const SIBLINGS = {
@@ -116,7 +117,13 @@ class VeSyncHumidifierCard extends HTMLElement {
     clearInterval(this._tick);
   }
 
+  _isCompact() {
+    const layout = this._config?.layout || "full";
+    return layout === "compact" || (layout === "expandable" && !this._expanded);
+  }
+
   getCardSize() {
+    if (this._isCompact()) return 2;
     return 9;
   }
 
@@ -292,6 +299,10 @@ class VeSyncHumidifierCard extends HTMLElement {
       case "reset-filter":
         this._dialog = null;
         this._call("button", "press", { entity_id: ids.reset_filter_entity });
+        break;
+      case "expand":
+        this._expanded = !this._expanded;
+        this._render();
         break;
       case "dismiss-error":
         this._error = null;
@@ -519,6 +530,82 @@ class VeSyncHumidifierCard extends HTMLElement {
         )}</div>`
       : "";
 
+    const expandable = this._config.layout === "expandable";
+    const modeLabel = esc(MODES.find((m) => m.mode === mode)?.label || mode || "On");
+    const errorHtml = this._error
+      ? `<div class="error" data-action="dismiss-error"><ha-icon icon="mdi:alert-circle-outline"></ha-icon><span>${esc(this._error)}</span></div>`
+      : "";
+    const gradient = `
+      <defs>
+        <linearGradient id="vs-grad" x1="0" y1="1" x2="1" y2="0">
+          <stop offset="0" stop-color="var(--vs-ring-a)"/>
+          <stop offset="1" stop-color="var(--vs-ring-b)"/>
+        </linearGradient>
+      </defs>`;
+
+    if (this._isCompact()) {
+      const bits = [];
+      if (unavailable) bits.push("Offline");
+      else if (!on) bits.push("Off");
+      else if (drying) {
+        bits.push("Drying");
+        if (dryLeft !== undefined) bits.push(`${fmtMinutes(dryLeft)} left`);
+      } else {
+        bits.push(modeLabel);
+        if (mode === "manual" && mist !== undefined) bits.push(`Mist ${mist}`);
+        if (target) bits.push(`Target ${target.value}%`);
+      }
+      if (on && timerLeft !== undefined && timerLeft > 0) bits.push(`Off in ${fmtMinutes(timerLeft)}`);
+      if (temp) {
+        bits.push(
+          esc(hass.formatEntityState ? hass.formatEntityState(temp) : `${temp.state} ${temp.attributes.unit_of_measurement || ""}`),
+        );
+      }
+      const miniValue = drying
+        ? `${dryLeft !== undefined ? Math.round(dryLeft) : "--"}<small>min</small>`
+        : `${humidity ?? "--"}<small>%</small>`;
+      const compactModes = MODES.filter((m) => modes.includes(m.mode))
+        .map(
+          (m) => `
+          <button class="mode ${on && mode === m.mode ? "sel" : ""}" data-action="mode" data-value="${m.mode}" ${unavailable ? "disabled" : ""} title="${m.label}" aria-label="${m.label}">
+            <span class="mode-icon"><ha-icon icon="${m.icon}"></ha-icon></span>
+          </button>`,
+        )
+        .join("");
+      this.shadowRoot.innerHTML = `
+        <style>${STYLE}</style>
+        <ha-card class="card compact ${on ? "is-on" : "is-off"} ${drying ? "is-dry" : ""}">
+          <div class="c-row">
+            <button class="mini" data-action="more-info" data-value="humidifier" aria-label="Humidity">
+              <svg viewBox="0 0 220 220" class="ring">
+                ${gradient}
+                <circle class="track" cx="110" cy="110" r="${RING_R}"
+                  stroke-dasharray="${dash} ${RING_C}" transform="rotate(135 110 110)"/>
+                <circle class="value" cx="110" cy="110" r="${RING_R}"
+                  stroke-dasharray="${fill} ${RING_C}" transform="rotate(135 110 110)"/>
+              </svg>
+              <span class="mini-val">${miniValue}</span>
+            </button>
+            <div class="title">
+              <div class="name">${esc(name)}</div>
+              <div class="status">${bits.join(" · ")}</div>
+            </div>
+            <button class="power ${on ? "on" : ""}" data-action="power" ${unavailable ? "disabled" : ""} aria-label="Power">
+              <ha-icon icon="mdi:power"></ha-icon>
+            </button>
+          </div>
+          ${alerts
+            .map(([icon, text]) => `<div class="alert"><ha-icon icon="${icon}"></ha-icon><span>${text}</span></div>`)
+            .join("")}
+          <div class="c-bottom">
+            <div class="modes">${compactModes}</div>
+            ${expandable ? `<button class="expand" data-action="expand" aria-label="Show more"><ha-icon icon="mdi:chevron-down"></ha-icon></button>` : ""}
+          </div>
+          ${errorHtml}
+        </ha-card>`;
+      return;
+    }
+
     this.shadowRoot.innerHTML = `
       <style>${STYLE}</style>
       <ha-card class="card ${on ? "is-on" : "is-off"} ${drying ? "is-dry" : ""}">
@@ -527,9 +614,12 @@ class VeSyncHumidifierCard extends HTMLElement {
             <div class="name">${esc(name)}</div>
             <div class="status">${unavailable ? "Offline" : on ? esc(MODES.find((m) => m.mode === mode)?.label || mode || "On") : "Off"}</div>
           </div>
-          <button class="power ${on ? "on" : ""}" data-action="power" ${unavailable ? "disabled" : ""} aria-label="Power">
-            <ha-icon icon="mdi:power"></ha-icon>
-          </button>
+          <div class="top-actions">
+            ${expandable ? `<button class="expand" data-action="expand" aria-label="Show less"><ha-icon icon="mdi:chevron-up"></ha-icon></button>` : ""}
+            <button class="power ${on ? "on" : ""}" data-action="power" ${unavailable ? "disabled" : ""} aria-label="Power">
+              <ha-icon icon="mdi:power"></ha-icon>
+            </button>
+          </div>
         </div>
 
         <div class="chips">${temperature}</div>
@@ -664,6 +754,7 @@ const SIBLING_LABELS = {
 const EDITOR_LABELS = {
   entity: "Humidifier",
   name: "Name (optional)",
+  layout: "Layout",
   humidity_entity: "Humidity reading (optional, defaults to the humidifier's sensor)",
   target_humidity_entity: "Target humidity helper (optional)",
   temperature_entity: "Temperature (optional)",
@@ -673,6 +764,19 @@ const EDITOR_LABELS = {
 const EDITOR_SCHEMA = [
   { name: "entity", required: true, selector: { entity: { domain: "humidifier" } } },
   { name: "name", selector: { text: {} } },
+  {
+    name: "layout",
+    selector: {
+      select: {
+        mode: "dropdown",
+        options: [
+          { value: "full", label: "Full" },
+          { value: "compact", label: "Compact" },
+          { value: "expandable", label: "Compact, tap to expand" },
+        ],
+      },
+    },
+  },
   {
     name: "humidity_entity",
     selector: { entity: { domain: "sensor", device_class: "humidity" } },
@@ -777,6 +881,32 @@ const STYLE = `
     border-radius: var(--ha-card-border-radius, 24px);
     font-family: var(--ha-font-family-body, Roboto, system-ui, sans-serif);
   }
+  .top-actions { display: flex; align-items: center; gap: 8px; }
+  .expand {
+    width: 36px; height: 36px; border-radius: 50%; display: grid; place-items: center;
+    background: var(--vs-surface); color: var(--vs-dim); flex: none;
+  }
+
+  .compact { padding: 12px; }
+  .c-row { display: flex; align-items: center; gap: 12px; }
+  .c-row .title { flex: 1; min-width: 0; }
+  .c-row .name { font-size: 16px; }
+  .c-row .status { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .mini { position: relative; width: 56px; height: 56px; flex: none; }
+  .mini .ring circle { stroke-width: 20; }
+  .mini-val {
+    position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+    font-size: 16px; font-weight: 500; font-variant-numeric: tabular-nums;
+  }
+  .mini-val small { font-size: 10px; color: var(--vs-dim); margin-left: 1px; }
+  .compact .alert { margin: 10px 0 0; padding: 8px 12px; font-size: 13px; }
+  .c-bottom { display: flex; align-items: center; gap: 8px; margin-top: 10px; }
+  .c-bottom .modes { flex: 1; margin: 0; justify-content: flex-start; gap: 8px; }
+  .c-bottom .mode { flex: none; }
+  .c-bottom .mode-icon { width: 38px; height: 38px; }
+  .c-bottom .mode-icon ha-icon { --mdc-icon-size: 20px; }
+  .c-bottom .expand { margin-left: auto; }
+
   .card.is-dry { --vs-ring-a: #ff8a3d; --vs-ring-b: #ffd166; }
   .missing { padding: 16px; }
 
