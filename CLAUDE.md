@@ -198,6 +198,7 @@ A rejected command raises `HomeAssistantError` and changes nothing.
 - Automation `automation.adjust_humidifier_based_on_average_humidity` sets mist
   level from `sensor.average_humidity` against `input_number.target_humidity`.
   It doesn't set the mode.
-- Dashboard: Overview (`lovelace`), view `default_view`, humidifier stack with
-  a mist level card, an out-of-water alert and a filter maintenance expander
-  (manual date tracking that a working Reset filter could replace).
+- Dashboard: Overview (`lovelace`), view `default_view`: an ecosee card, then
+  `custom:vesync-humidifier-card`. The old manual filter-date helpers,
+  script and reminder automation were deleted on 2026-11-22; filter life now
+  comes from `sensor.humidifier_filter_life`.
