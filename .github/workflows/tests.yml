@@ -24,14 +24,12 @@ jobs:
           path: core
 
       - uses: astral-sh/setup-uv@v5
-        with:
-          python-version: "3.14"
 
       - name: Install Home Assistant and test requirements
         working-directory: core
         run: |
-          uv venv
-          uv pip install -e . -r requirements_test.txt \
+          uv venv -p 3.14 .venv
+          uv pip install -p .venv/bin/python -e . -r requirements_test.txt \
             -e packages/pytest-homeassistant \
             aiohasupervisor==0.8.1 pyvesync==3.5.1
 
@@ -43,14 +41,14 @@ jobs:
 
       - name: Build translations
         working-directory: core
-        run: uv run --no-sync python -m script.translations develop --all
+        run: .venv/bin/python -m script.translations develop --all
 
       - name: Lint
         working-directory: core
         run: |
-          uv run --no-sync ruff check homeassistant/components/vesync tests/components/vesync
-          uv run --no-sync ruff format --check homeassistant/components/vesync tests/components/vesync
+          .venv/bin/ruff check homeassistant/components/vesync tests/components/vesync
+          .venv/bin/ruff format --check homeassistant/components/vesync tests/components/vesync
 
       - name: Test
         working-directory: core
-        run: uv run --no-sync python -m pytest tests/components/vesync -q -p no:cacheprovider
+        run: .venv/bin/python -m pytest tests/components/vesync -q -p no:cacheprovider
