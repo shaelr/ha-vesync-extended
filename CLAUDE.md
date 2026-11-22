@@ -152,54 +152,48 @@ Read from HA diagnostics while the owner used the Levoit app:
 - `sensorContent.sensorStatus` is `noDevices` (no Levoit remote sensor
   paired).
 - Levoit's cloud can take ~4 minutes to reflect a change made in the app.
-
-## Experimental (sent by us, not confirmed on the device)
-
-pyvesync has no 6000S commands for these, so `superior6000s.py` guesses from
-other Levoit models:
-
-| Feature | Command sent |
-| --- | --- |
-| Off timer | `addTimerV2` `{"startAct":[{"type":"powerSwitch","num":0,"act":0}],"total":<s>}`, falls back to `addTimer` `{"action":"off","total":<s>}`. Cancel uses `getTimerV2`/`delTimerV2` or `getTimer`/`delTimer` |
-| Reset filter | `resetFilter` `{}` (the command Levoit air purifiers use) |
+- **Off timer** (tested from HA 2026-11-22: set 60 min, then cancelled):
+  `addTimerV2` `{"startAct":[{"type":"powerSwitch","num":0,"act":0}],"total":<s>}`,
+  falling back to `addTimer` `{"action":"off","total":<s>}`. Cancel uses
+  `getTimerV2`/`delTimerV2` or `getTimer`/`delTimer`. Which flavour the 6000S
+  accepted is logged at INFO ("accepted the ... timer API") but wasn't recorded.
+- **Reset filter:** `resetFilter` `{}` works. Pressed from HA on 2026-11-22
+  at 99%; the next polls read 100% back from the cloud.
+- **`dry` mode from HA** works: choosing it starts drying, choosing Manual
+  stops it (several cycles tested 2026-11-22).
 
 A rejected command raises `HomeAssistantError` and changes nothing.
 
 ## Not done yet
 
-1. **Install through HACS.** Pushed to `shaelr/ha-vesync-extended` on
-   2026-11-22; Tests and Validate pass. Add it in HACS as a custom repository
-   (type Integration), download, restart HA.
-2. **Test the experimental commands on the humidifier.** Filter life went
-   from 99% to 100% on 2026-11-22, but it isn't known whether HA's Reset
-   filter did that. Set a 1-hour off timer and cancel it. Test the `dry` mode
-   from HA, and leaving it by choosing Manual.
-3. **Real commands for filter reset** (drying is now known, see above). Traffic capture
-   failed (2026-11-22): the VeSync app (iOS build 6.0.11, run on the Mac)
-   pins certificates for every VeSync host, so mitmproxy saw nothing. Don't
-   retry the capture. Instead, the app binary's strings were read
-   (`/Applications/VeSync.app/Wrapper/VeSync.app/VeSync`; the Kotlin strings
-   are UTF-16, so plain `strings` misses them). The app's shared Kotlin code
-   (`com.vesync.kmp.air.humidifier`) has a status model matching the 6000S
-   exactly, and its full `bypassV2` method list is: `getHumidifierStatus`,
-   `setSwitch`, `setVirtualLevel`, `setHumidityMode`, `setLampSwitch`,
-   `setLightStatus`, `setSnoozeSwitch`, scene/schedule methods,
-   `setDryingMode`, `setSelfCleanMode`, `setDirtyWaterClean`, `resetSensor`,
-   `setSensorCalibrationValue`.
-   - `setDryingMode` also has `afterDryState` and `exitDryState` (ints). The
-     app offers "dry then humidify" and "dry then power off", probably the
-     `afterDryState` values. Which numbers mean what is still unknown.
-   - **Filter reset:** there's no filter command in the Kotlin list. The older
-     Swift humidifier method list has `resetFilter`, which we already send.
-     Unconfirmed.
-   - **Calibration:** `resetSensor {sensorType}` and
-     `setSensorCalibrationValue {sensorType, ...}` (other fields unknown).
-   - Swift humidifier lists also have `setWaterShortageDrying` (for
-     `waterShortageDryingSwitch`) and `setAutoDryingSwitch`.
-   - **Never record anything but `method` and `data`.** Requests also hold
-     the Levoit account ID and login token.
-4. **Not started:**
-   - Humidity calibration (see above for the command names).
+Everything built so far is installed (HACS, 39f7e3c) and confirmed on the
+device. The card loads from the integration (no dashboard resource), and the
+extended entities use the `humidifier_` prefix.
+
+1. **Humidity calibration** (not started).
+2. **`afterDryState` / `exitDryState` values** for `setDryingMode` (ints). The
+   app offers "dry then humidify" and "dry then power off", probably these.
+   Which numbers mean what is unknown.
+
+Notes for both: traffic capture failed (2026-11-22): the VeSync app (iOS build
+6.0.11, run on the Mac) pins certificates for every VeSync host, so mitmproxy
+saw nothing. Don't retry the capture. Instead, the app binary's strings were
+read (`/Applications/VeSync.app/Wrapper/VeSync.app/VeSync`; the Kotlin strings
+are UTF-16, so plain `strings` misses them). The app's shared Kotlin code
+(`com.vesync.kmp.air.humidifier`) has a status model matching the 6000S
+exactly, and its full `bypassV2` method list is: `getHumidifierStatus`,
+`setSwitch`, `setVirtualLevel`, `setHumidityMode`, `setLampSwitch`,
+`setLightStatus`, `setSnoozeSwitch`, scene/schedule methods, `setDryingMode`,
+`setSelfCleanMode`, `setDirtyWaterClean`, `resetSensor`,
+`setSensorCalibrationValue`.
+
+- **Calibration:** `resetSensor {sensorType}` and
+  `setSensorCalibrationValue {sensorType, ...}` (other fields unknown). Try
+  them with `vesync.send_command`.
+- Swift humidifier lists also have `setWaterShortageDrying` (for
+  `waterShortageDryingSwitch`) and `setAutoDryingSwitch`.
+- **Never record anything but `method` and `data`.** Requests also hold the
+  Levoit account ID and login token.
 
 ## Owner's HA setup (context)
 

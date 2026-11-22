@@ -10,44 +10,58 @@ Based on the VeSync integration from Home Assistant **2026.11.2**
 
 ## What it adds
 
-All of these come from data the VeSync cloud already sends that the built-in
-integration ignores.
-
 | Entity | Type | Devices | Notes |
 | --- | --- | --- | --- |
 | Target humidity reached | Binary sensor | Humidifiers with auto stop | On when the humidifier has paused because it hit its target |
-| Drying status | Sensor | Superior 6000S | `drying`, `complete` or `idle` |
-| Drying time remaining | Sensor | Superior 6000S | Minutes left on the drying cycle |
-| Drying level | Select | Superior 6000S | `low` or `high` |
-| Off timer | Number | Superior 6000S | 0–12 hours. Shows hours left, rounded up. Set 0 to cancel |
-| Off timer remaining | Sensor | Superior 6000S | Minutes left on the off timer |
-| Total run time | Sensor | Superior 6000S | Lifetime run time in hours (diagnostic) |
+| Drying status | Sensor | Superior 6000S | `drying`, `stopped` or `idle` |
+| Drying time remaining | Sensor | Superior 6000S | Time left on the drying cycle |
+| Drying level | Select | Superior 6000S | `low` or `high`. While idle it only sets the level the next drying cycle uses |
+| Off timer | Number | Superior 6000S | Minutes, 0–720 (90 = 1 h 30 min, as in the app). Set 0 to cancel |
+| Off timer remaining | Sensor | Superior 6000S | Time left on the off timer |
+| Dry Mode: Water Shortage | Switch | Superior 6000S | Dry the unit when the tank runs out |
 | Reset filter | Button | Superior 6000S | Sets the wick filter life back to 100% |
+| Total run time | Sensor | Superior 6000S | Lifetime run time (diagnostic) |
 | External sensor status | Sensor | Superior 6000S | State of the optional Levoit remote sensor, for example `no_devices` (diagnostic) |
+
+All of these were tested on a real Superior 6000S (firmware 3.0.03).
+pyvesync has no commands for the off timer, drying, the water shortage switch
+or filter reset on this model, so the integration sends them itself. If the
+cloud rejects one, Home Assistant shows an error and nothing changes.
 
 ### Other changes
 
 - The humidifier's **Manual** mode is called `manual` instead of `normal`,
   matching the Levoit app. Automations or scripts that set a VeSync humidifier
   to `normal` need changing to `manual`.
-- Drying readings come from Levoit's cloud, which can lag the app by a few
-  minutes.
+- The Superior 6000S gets a **`dry`** humidifier mode. It shows while the unit
+  is drying; choosing it starts a drying cycle at the Drying level, and
+  choosing another mode stops it.
+- The core **Auto Off** switch is hidden for the Superior 6000S, which has no
+  such setting.
+- Names follow the Levoit app: "Display lock" (child lock) and
+  "Dry Mode: Power Off".
+- Readings come from Levoit's cloud, which can lag the app by a few minutes.
 
-### Experimental
+### Dashboard card
 
-pyvesync has no commands for the **off timer**, **drying level** or
-**filter reset** on the Superior 6000S, so this integration sends them itself, using the same API
-calls other Levoit humidifiers use:
+The integration serves a dashboard card styled after the VeSync app; no
+dashboard resource is needed. Add it with:
 
-- Off timer tries `addTimerV2` (LV600S style) first and falls back to
-  `addTimer` (Classic/OasisMist style). Whichever works is remembered.
-- Drying level sends `setDryingMode` with `dryingLevel`, keeping the current
-  drying on/off setting.
+```yaml
+type: custom:vesync-humidifier-card
+entity: humidifier.humidifier
+```
 
-- Reset filter sends `resetFilter`, the command Levoit air purifiers use.
+It finds the humidifier's other entities by itself and has a visual editor.
+Options include `layout` (`full`, `compact` or `expandable`),
+`target_humidity_entity`, `humidity_entity`, `name` and
+`humidity_automation`.
 
-If the cloud rejects one, Home Assistant shows an error and nothing changes.
-Turn on debug logging for `custom_components.vesync` to see the reply.
+### Developer action
+
+`vesync.send_command` (device, method, data) sends any bypass V2 command and
+returns the reply plus the status read right after. It's for working out
+commands the integration doesn't know yet.
 
 ### Not included
 
@@ -76,17 +90,20 @@ This copy doesn't change when Home Assistant updates its own VeSync
 integration. When a new release changes `vesync` upstream, rebase these
 changes onto it. They are kept small to make that easy:
 
-- `superior6000s.py`: raw status capture and the extra commands.
+- `superior6000s.py`: raw status capture, the extra commands and
+  `vesync.send_command`.
 - `extra_entities.py`: the new Superior 6000S entities.
-- One-line hooks in `coordinator.py`, `sensor.py`, `number.py` and
-  `select.py`; the target-reached description in `binary_sensor.py`; names in
+- `card.py` and `frontend/`: the dashboard card.
+- Small hooks in `coordinator.py`, `sensor.py`, `number.py`, `select.py`,
+  `button.py`, `switch.py`, `humidifier.py`, `services.py` and `__init__.py`;
+  the target-reached description in `binary_sensor.py`; names in
   `strings.json` / `translations/en.json` and icons in `icons.json`.
 
 ## Tests
 
-The tests run against a Home Assistant core checkout (see
-`.github/workflows/tests.yml`). The CI checks out core at the matching
-release, swaps in this integration and its tests, and runs
+The tests run against a Home Assistant core checkout: `scripts/test.sh`
+locally, `.github/workflows/tests.yml` in CI. Both check out core at the
+matching release, swap in this integration and its tests, and run ruff and
 `pytest tests/components/vesync`.
 
 ## License
