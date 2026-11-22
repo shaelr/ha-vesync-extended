@@ -1,0 +1,38 @@
+{
+  "domain": "vesync",
+  "name": "VeSync",
+  "categories": [
+    "climate.air_purifiers_humidifiers",
+    "plugs_switches",
+    "appliances_cleaning.cooking"
+  ],
+  "codeowners": [
+    "@shaelr",
+    "@markperdue",
+    "@webdjoe",
+    "@thegardenmonkey",
+    "@cdnninja",
+    "@iprak",
+    "@sapuseven"
+  ],
+  "config_flow": true,
+  "connectivity": [
+    "cloud"
+  ],
+  "dhcp": [
+    {
+      "hostname": "levoit-*"
+    }
+  ],
+  "documentation": "https://github.com/shaelr/ha-vesync-extended",
+  "integration_type": "hub",
+  "iot_class": "cloud_polling",
+  "issue_tracker": "https://github.com/shaelr/ha-vesync-extended/issues",
+  "loggers": [
+    "pyvesync"
+  ],
+  "requirements": [
+    "pyvesync==3.5.1"
+  ],
+  "version": "2026.11.2.1"
+}

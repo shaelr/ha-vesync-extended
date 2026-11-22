@@ -1,0 +1,56 @@
+name: Tests
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+env:
+  # The Home Assistant release this integration is based on.
+  HA_VERSION: "2026.11.2"
+
+jobs:
+  pytest:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: repo
+
+      - uses: actions/checkout@v4
+        with:
+          repository: home-assistant/core
+          ref: ${{ env.HA_VERSION }}
+          path: core
+
+      - uses: astral-sh/setup-uv@v5
+        with:
+          python-version: "3.14"
+
+      - name: Install Home Assistant and test requirements
+        working-directory: core
+        run: |
+          uv venv
+          uv pip install -e . -r requirements_test.txt \
+            -e packages/pytest-homeassistant \
+            aiohasupervisor==0.8.1 pyvesync==3.5.1
+
+      - name: Swap in this integration and its tests
+        run: |
+          rm -rf core/homeassistant/components/vesync core/tests/components/vesync
+          cp -r repo/custom_components/vesync core/homeassistant/components/vesync
+          cp -r repo/tests/vesync core/tests/components/vesync
+
+      - name: Build translations
+        working-directory: core
+        run: uv run --no-sync python -m script.translations develop --all
+
+      - name: Lint
+        working-directory: core
+        run: |
+          uv run --no-sync ruff check homeassistant/components/vesync tests/components/vesync
+          uv run --no-sync ruff format --check homeassistant/components/vesync tests/components/vesync
+
+      - name: Test
+        working-directory: core
+        run: uv run --no-sync python -m pytest tests/components/vesync -q -p no:cacheprovider

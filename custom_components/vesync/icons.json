@@ -1,0 +1,69 @@
+{
+  "entity": {
+    "binary_sensor": {
+      "target_reached": {
+        "default": "mdi:water-check",
+        "state": {
+          "off": "mdi:water-percent"
+        }
+      }
+    },
+    "button": {
+      "reset_filter": {
+        "default": "mdi:air-filter"
+      }
+    },
+    "fan": {
+      "vesync": {
+        "state_attributes": {
+          "preset_mode": {
+            "state": {
+              "advanced_sleep": "mdi:sleep",
+              "auto": "mdi:fan-auto",
+              "eco": "mdi:leaf",
+              "pet": "mdi:paw",
+              "sleep": "mdi:sleep",
+              "turbo": "mdi:weather-tornado"
+            }
+          }
+        }
+      }
+    },
+    "number": {
+      "off_timer": {
+        "default": "mdi:timer-outline"
+      }
+    },
+    "select": {
+      "drying_level": {
+        "default": "mdi:fan-chevron-up"
+      }
+    },
+    "sensor": {
+      "drying_status": {
+        "default": "mdi:weather-windy",
+        "state": {
+          "done": "mdi:check-circle-outline",
+          "paused": "mdi:pause-circle-outline"
+        }
+      },
+      "drying_time_remaining": {
+        "default": "mdi:timer-sand"
+      },
+      "off_timer_remaining": {
+        "default": "mdi:timer-sand"
+      },
+      "total_run_time": {
+        "default": "mdi:clock-outline"
+      },
+      "external_sensor_status": {
+        "default": "mdi:access-point"
+      }
+    }
+  },
+  "services": {
+    "update_devices": {
+      "service": "mdi:update"
+    }
+  }
+}
