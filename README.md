@@ -24,6 +24,14 @@ integration ignores.
 | Total run time | Sensor | Superior 6000S | Lifetime run time in hours (diagnostic) |
 | External sensor status | Sensor | Superior 6000S | State of the optional Levoit remote sensor, for example `no_devices` (diagnostic) |
 
+### Other changes
+
+- The humidifier's **Manual** mode shows as "Manual" instead of "Normal".
+  Only the label changes: the mode's value is still `normal`, so anything that
+  sets it keeps working.
+- Drying readings come from Levoit's cloud, which can lag the app by a few
+  minutes.
+
 ### Experimental
 
 pyvesync has no commands for the **off timer** or **drying level** on the
