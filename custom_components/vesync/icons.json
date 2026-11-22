@@ -43,8 +43,8 @@
       "drying_status": {
         "default": "mdi:weather-windy",
         "state": {
-          "done": "mdi:check-circle-outline",
-          "paused": "mdi:pause-circle-outline"
+          "complete": "mdi:check-circle-outline",
+          "idle": "mdi:pause-circle-outline"
         }
       },
       "drying_time_remaining": {

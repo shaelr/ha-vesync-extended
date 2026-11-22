@@ -16,7 +16,7 @@ integration ignores.
 | Entity | Type | Devices | Notes |
 | --- | --- | --- | --- |
 | Target humidity reached | Binary sensor | Humidifiers with auto stop | On when the humidifier has paused because it hit its target |
-| Drying status | Sensor | Superior 6000S | `drying`, `paused` or `done` |
+| Drying status | Sensor | Superior 6000S | `drying`, `complete` or `idle` |
 | Drying time remaining | Sensor | Superior 6000S | Minutes left on the drying cycle |
 | Drying level | Select | Superior 6000S | `low` or `high` |
 | Off timer | Number | Superior 6000S | 0–12 hours. Shows hours left, rounded up. Set 0 to cancel |

@@ -23,8 +23,10 @@ _LOGGER = logging.getLogger(__name__)
 # response saved on the device is a status poll and not a command reply.
 _STATUS_KEYS = ("powerSwitch", "filterLifePercent", "workMode")
 
-# dryingMode.dryingState, matching pyvesync's DryingModes.from_int.
-DRYING_STATES: dict[int, str] = {0: "done", 1: "drying", 2: "paused"}
+# dryingMode.dryingState. Seen on a real 6000S: 2 with a full dryingRemain
+# while idle after an earlier cycle, then 1 counting down once drying starts.
+# pyvesync calls 2 "pause"; "complete" matches what the device actually does.
+DRYING_STATES: dict[int, str] = {0: "idle", 1: "drying", 2: "complete"}
 
 # dryingMode.dryingLevel. The device and manual offer Low and High.
 DRYING_LEVELS: dict[int, str] = {1: "low", 2: "high"}

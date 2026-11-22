@@ -1765,9 +1765,9 @@
       'area_id': None,
       'capabilities': dict({
         <SensorEntityCapabilityAttribute.OPTIONS: 'options'>: list([
-          'done',
+          'idle',
           'drying',
-          'paused',
+          'complete',
         ]),
       }),
       'config_entry_id': <ANY>,
@@ -1961,9 +1961,9 @@
       <EntityStateAttribute.DEVICE_CLASS: 'device_class'>: 'enum',
       <EntityStateAttribute.FRIENDLY_NAME: 'friendly_name'>: 'Humidifier 6000s Drying status',
       <SensorEntityCapabilityAttribute.OPTIONS: 'options'>: list([
-        'done',
+        'idle',
         'drying',
-        'paused',
+        'complete',
       ]),
     }),
     'context': <ANY>,
@@ -1971,7 +1971,7 @@
     'last_changed': <ANY>,
     'last_reported': <ANY>,
     'last_updated': <ANY>,
-    'state': 'paused',
+    'state': 'complete',
   })
 # ---
 # name: test_sensor_state[Humidifier 6000s][sensor.humidifier_6000s_drying_time_remaining]

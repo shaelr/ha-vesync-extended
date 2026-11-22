@@ -144,9 +144,9 @@
       "drying_status": {
         "name": "Drying status",
         "state": {
-          "done": "Done",
+          "complete": "Complete",
           "drying": "Drying",
-          "paused": "Paused"
+          "idle": "Idle"
         }
       },
       "drying_time_remaining": {

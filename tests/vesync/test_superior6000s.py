@@ -201,7 +201,7 @@ async def test_drying_status_states(
     config_entry: MockConfigEntry,
     aioclient_mock: AiohttpClientMocker,
 ) -> None:
-    """Drying status maps dryingState to done, drying or paused."""
+    """Drying status maps dryingState to idle, drying or complete."""
     await _setup(
         hass,
         config_entry,
