@@ -115,20 +115,35 @@ A rejected command raises `HomeAssistantError` and changes nothing.
 2. **Test the experimental commands on the humidifier.** The filter is at 99%,
    so a working Reset filter just shows 100%. Set a 1-hour off timer and
    cancel it. Switch drying level.
-3. **Capture the app's real commands** for **filter reset** and **start
-   drying** (the app's "Dry" button). Plan: mitmproxy on the computer, phone
-   proxied through it with the mitmproxy certificate trusted, tap the buttons,
-   filter for `bypassV2`, read `payload.method` and `payload.data`. The app may
-   pin certificates, in which case this won't work.
-   - **Only ever record `method` and `data`.** The rest of the request holds
-     the Levoit account ID and login token. Never commit, log or paste them.
-   - With the real commands: fix `async_reset_filter` if needed, and add a
-     "Start drying" button (status confirms it via `dryingState == 1`).
+3. **Real commands for filter reset and start drying.** Traffic capture
+   failed (2026-11-22): the VeSync app (iOS build 6.0.11, run on the Mac)
+   pins certificates for every VeSync host, so mitmproxy saw nothing. Don't
+   retry the capture. Instead, the app binary's strings were read
+   (`/Applications/VeSync.app/Wrapper/VeSync.app/VeSync`; the Kotlin strings
+   are UTF-16, so plain `strings` misses them). The app's shared Kotlin code
+   (`com.vesync.kmp.air.humidifier`) has a status model matching the 6000S
+   exactly, and its full `bypassV2` method list is: `getHumidifierStatus`,
+   `setSwitch`, `setVirtualLevel`, `setHumidityMode`, `setLampSwitch`,
+   `setLightStatus`, `setSnoozeSwitch`, scene/schedule methods,
+   `setDryingMode`, `setSelfCleanMode`, `setDirtyWaterClean`, `resetSensor`,
+   `setSensorCalibrationValue`.
+   - **Start/stop drying** is `setDryingMode` with the fields `dryingLevel`,
+     `autoDryingSwitch`, `afterDryState`, `exitDryState` (ints). The app
+     offers "dry then humidify" and "dry then power off", which are probably
+     the `afterDryState` values. The numbers aren't readable from strings, so
+     they have to be tried on the device (`dryingState == 1` confirms).
+   - **Filter reset:** there's no filter command in the Kotlin list. The older
+     Swift humidifier method list has `resetFilter`, which we already send.
+     Unconfirmed.
+   - **Calibration:** `resetSensor {sensorType}` and
+     `setSensorCalibrationValue {sensorType, ...}` (other fields unknown).
+   - Swift humidifier lists also have `setWaterShortageDrying` (for
+     `waterShortageDryingSwitch`) and `setAutoDryingSwitch`.
+   - **Never record anything but `method` and `data`.** Requests also hold
+     the Levoit account ID and login token.
 4. **Not started:**
-   - Humidity calibration. The device reports `supportCalibrationSensors:
-     ["humidity"]`, but the command isn't known.
-   - A sensor for `waterShortageDryingSwitch` (drying when the tank runs dry;
-     currently 1). A switch for it would need the command.
+   - Humidity calibration (see above for the command names).
+   - A sensor/switch for `waterShortageDryingSwitch` (currently 1).
 
 ## Owner's HA setup (context)
 
