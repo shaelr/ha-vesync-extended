@@ -24,10 +24,18 @@ from homeassistant.components.select import (
     DOMAIN as SELECT_DOMAIN,
     SERVICE_SELECT_OPTION,
 )
+from homeassistant.components.switch import DOMAIN as SWITCH_DOMAIN
+from homeassistant.components.vesync import extra_entities
 from homeassistant.components.vesync.const import DOMAIN
 from homeassistant.components.vesync.extra_entities import _planned_level
 from homeassistant.components.vesync.superior6000s import extract_status
-from homeassistant.const import ATTR_ENTITY_ID
+from homeassistant.const import (
+    ATTR_ENTITY_ID,
+    SERVICE_TURN_OFF,
+    SERVICE_TURN_ON,
+    STATE_OFF,
+    STATE_ON,
+)
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
 from homeassistant.helpers import device_registry as dr
@@ -449,3 +457,80 @@ async def test_send_command_unknown_device(
             blocking=True,
             return_response=True,
         )
+
+
+WATER_SHORTAGE_DRYING = "switch.humidifier_6000s_dry_when_out_of_water"
+
+
+async def _switch(hass: HomeAssistant, service: str) -> None:
+    await hass.services.async_call(
+        SWITCH_DOMAIN, service, {ATTR_ENTITY_ID: WATER_SHORTAGE_DRYING}, blocking=True
+    )
+
+
+async def test_water_shortage_drying(
+    hass: HomeAssistant,
+    config_entry: MockConfigEntry,
+    aioclient_mock: AiohttpClientMocker,
+) -> None:
+    """The switch sends a JSON boolean and keeps it while the cloud lags."""
+    await _setup(hass, config_entry, aioclient_mock)
+    assert hass.states.get(WATER_SHORTAGE_DRYING).state == STATE_ON
+    aioclient_mock.mock_calls.clear()
+
+    await _switch(hass, SERVICE_TURN_OFF)
+
+    sent = _sent(aioclient_mock)
+    assert ("setWaterShortageDrying", {"waterShortageDryingSwitch": False}) in sent
+    assert hass.states.get(WATER_SHORTAGE_DRYING).state == STATE_OFF
+
+    # A poll that still reports the old value does not flip the switch back.
+    await config_entry.runtime_data.async_refresh()
+    await hass.async_block_till_done()
+    assert hass.states.get(WATER_SHORTAGE_DRYING).state == STATE_OFF
+
+    aioclient_mock.mock_calls.clear()
+    await _switch(hass, SERVICE_TURN_ON)
+    sent = _sent(aioclient_mock)
+    assert ("setWaterShortageDrying", {"waterShortageDryingSwitch": True}) in sent
+    assert hass.states.get(WATER_SHORTAGE_DRYING).state == STATE_ON
+
+
+async def test_water_shortage_drying_pending_expires(
+    hass: HomeAssistant,
+    config_entry: MockConfigEntry,
+    aioclient_mock: AiohttpClientMocker,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Once the wait is over, the polled value wins."""
+    monkeypatch.setattr(extra_entities, "_PENDING_SECONDS", -1)
+    await _setup(hass, config_entry, aioclient_mock)
+
+    await _switch(hass, SERVICE_TURN_OFF)
+    await config_entry.runtime_data.async_refresh()
+    await hass.async_block_till_done()
+
+    assert hass.states.get(WATER_SHORTAGE_DRYING).state == STATE_ON
+
+
+async def test_water_shortage_drying_rejected(
+    hass: HomeAssistant,
+    config_entry: MockConfigEntry,
+    aioclient_mock: AiohttpClientMocker,
+) -> None:
+    """A rejected change raises an error and leaves the switch alone."""
+    await _setup(hass, config_entry, aioclient_mock)
+    aioclient_mock.clear_requests()
+    aioclient_mock.post(
+        BYPASS_URL,
+        json={
+            "traceId": "1",
+            "code": 0,
+            "msg": "request success",
+            "result": {"traceId": "1", "code": 11000000, "result": {}},
+        },
+    )
+
+    with pytest.raises(HomeAssistantError):
+        await _switch(hass, SERVICE_TURN_OFF)
+    assert hass.states.get(WATER_SHORTAGE_DRYING).state == STATE_ON

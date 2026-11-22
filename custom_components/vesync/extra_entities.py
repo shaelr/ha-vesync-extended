@@ -8,6 +8,7 @@ from collections.abc import Callable
 from dataclasses import dataclass
 import math
 import re
+import time
 from typing import Any, override
 
 from pyvesync.base_devices.vesyncbasedevice import VeSyncBaseDevice
@@ -21,6 +22,7 @@ from homeassistant.components.sensor import (
     SensorEntityDescription,
     SensorStateClass,
 )
+from homeassistant.components.switch import SwitchEntity
 from homeassistant.const import EntityCategory, UnitOfTime
 from homeassistant.core import callback
 from homeassistant.exceptions import HomeAssistantError
@@ -38,6 +40,7 @@ from .superior6000s import (
     async_clear_off_timer,
     async_reset_filter,
     async_set_off_timer,
+    async_set_water_shortage_drying,
     async_start_drying,
     is_superior_6000s,
 )
@@ -364,6 +367,56 @@ def _set_drying(
     coordinator.async_update_listeners()
 
 
+# Drying after the tank runs dry
+
+# How long a value set from Home Assistant is shown even though polls still
+# report the old one. Levoit's cloud takes up to ~4 minutes to catch up.
+_PENDING_SECONDS = 300
+
+
+class VeSyncWaterShortageDryingSwitch(VeSyncExtraEntity, SwitchEntity):
+    """Start drying when the tank runs out of water (the app's Water Shortage)."""
+
+    _attr_translation_key = "water_shortage_drying"
+    _attr_entity_category = EntityCategory.CONFIG
+
+    def __init__(
+        self, device: VeSyncBaseDevice, coordinator: VeSyncDataCoordinator
+    ) -> None:
+        """Initialize the switch."""
+        super().__init__(device, "water_shortage_drying", coordinator)
+        self._pending: tuple[bool, float] | None = None
+
+    @property
+    @override
+    def is_on(self) -> bool | None:
+        """Return the setting, or the value just set until the cloud catches up."""
+        value = _int(self.status.get("waterShortageDryingSwitch"))
+        reported = None if value is None else value == 1
+        if self._pending is not None:
+            wanted, until = self._pending
+            if time.monotonic() < until:
+                return wanted
+            self._pending = None
+        return reported
+
+    async def _async_set(self, enabled: bool) -> None:
+        if not await async_set_water_shortage_drying(self.device, enabled):
+            raise HomeAssistantError("The humidifier rejected the setting")
+        self._pending = (enabled, time.monotonic() + _PENDING_SECONDS)
+        self._optimistic(waterShortageDryingSwitch=int(enabled))
+
+    @override
+    async def async_turn_on(self, **kwargs: Any) -> None:
+        """Turn drying after a water shortage on."""
+        await self._async_set(True)
+
+    @override
+    async def async_turn_off(self, **kwargs: Any) -> None:
+        """Turn drying after a water shortage off."""
+        await self._async_set(False)
+
+
 # Filter reset
 
 
@@ -447,4 +500,16 @@ def button_entities(
         for dev in devices
         if is_superior_6000s(dev)
         and getattr(dev.state, "filter_life", None) is not None
+    ]
+
+
+def switch_entities(
+    devices: Any, coordinator: VeSyncDataCoordinator
+) -> list[SwitchEntity]:
+    """Return the extra switches for these devices."""
+    return [
+        VeSyncWaterShortageDryingSwitch(dev, coordinator)
+        for dev in devices
+        if is_superior_6000s(dev)
+        and "waterShortageDryingSwitch" in _status(dev, coordinator)
     ]

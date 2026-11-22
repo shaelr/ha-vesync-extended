@@ -194,6 +194,9 @@
       },
       "drying_mode_power_off": {
         "name": "Enable drying mode while power is off"
+      },
+      "water_shortage_drying": {
+        "name": "Dry when out of water"
       }
     }
   },

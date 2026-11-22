@@ -59,6 +59,11 @@
       "external_sensor_status": {
         "default": "mdi:access-point"
       }
+    },
+    "switch": {
+      "water_shortage_drying": {
+        "default": "mdi:water-off"
+      }
     }
   },
   "services": {

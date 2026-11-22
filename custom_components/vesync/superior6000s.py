@@ -191,6 +191,20 @@ async def async_start_drying(device: VeSyncBaseDevice, level: int) -> bool:
     return True
 
 
+async def async_set_water_shortage_drying(
+    device: VeSyncBaseDevice, enabled: bool
+) -> bool:
+    """Turn drying after the tank runs dry on or off.
+
+    Confirmed on a real 6000S: the value must be a JSON boolean. 0 and 1 are
+    rejected with code 11000000, even though the status reports 0 or 1.
+    """
+    result = await _call(
+        device, "setWaterShortageDrying", {"waterShortageDryingSwitch": enabled}
+    )
+    return result is not None
+
+
 # Developer action: send any bypass V2 command to a device and return the
 # reply plus the status read right after. Used to work out commands pyvesync
 # does not know, such as starting drying on the 6000S.

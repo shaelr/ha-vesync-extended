@@ -32,7 +32,7 @@ only get small hooks:
 
 - `coordinator.py`: `self.extra_status` dict and `capture_extra_status()`,
   called in `__init__` and after `update_all_devices()`.
-- `sensor.py`, `number.py`, `select.py`, `button.py`: one
+- `sensor.py`, `number.py`, `select.py`, `button.py`, `switch.py`: one
   `async_add_entities(<x>_entities(devices, coordinator))` line each.
 - `services.py`: one `async_setup_send_command(hass)` line. The
   `vesync.send_command` developer action (device, method, data) sends any
@@ -75,7 +75,7 @@ tests into it, builds translations, then runs ruff and pytest. The PyPI
 `pytest-homeassistant-custom-component` package stops at HA 2026.2, which is
 why the tests run inside core instead.
 
-Expected: **222 passed**. When the snapshot files change, check the diff only
+Expected: **225 passed**. When the snapshot files change, check the diff only
 adds or changes what you meant to.
 
 If the format check fails, run `.ha-core/.venv/bin/ruff format
@@ -99,8 +99,16 @@ Read from HA diagnostics while the owner used the Levoit app:
   the mode the device is already in ends the cycle, as the app does.
 - So the Drying level select must not send anything while idle; it only
   remembers the level the `dry` mode will use.
-- `setWaterShortageDrying` rejected `{"waterShortageDryingSwitch":1}` and
-  `{"switch":1}` (code 11000000), and `setDryingMode` ignores that field.
+- **Dry when out of water** (the app's "Dry Mode: Water Shortage"):
+  `setWaterShortageDrying {"waterShortageDryingSwitch": true|false}`. It must
+  be a JSON boolean; `0`/`1` and other field names give 11000000. The status
+  still reports it as `0`/`1`.
+- Device codes: `-1` means the method doesn't exist; `11000000` means the
+  method exists but the data is wrong.
+- "Dry Mode: Power Off" is `autoDryingSwitch`, already a core switch
+  (`drying_mode_power_off`).
+- Settings changed from HA take a few minutes to show in polls, so the Dry
+  when out of water switch keeps the value it set for 5 minutes.
 - `dryingMode.dryingLevel`: `1` = Low, `2` = High. Switching to High mid-cycle
   dropped the time left from ~1 h 54 m to ~26 min.
 - `totalWorkTime` is in **seconds** (went up ~2 h between two reads 2 h
@@ -158,7 +166,6 @@ A rejected command raises `HomeAssistantError` and changes nothing.
      the Levoit account ID and login token.
 4. **Not started:**
    - Humidity calibration (see above for the command names).
-   - A sensor/switch for `waterShortageDryingSwitch` (currently 1).
 
 ## Owner's HA setup (context)
 

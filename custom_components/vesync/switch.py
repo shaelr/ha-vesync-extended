@@ -24,6 +24,7 @@ from .common import is_humidifier, is_outlet, is_wall_switch, rgetattr
 from .const import VS_DEVICES, VS_DISCOVERY
 from .coordinator import VesyncConfigEntry, VeSyncDataCoordinator
 from .entity import VeSyncBaseEntity
+from .extra_entities import switch_entities
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -176,6 +177,7 @@ def _setup_entities(
         for description in SENSOR_DESCRIPTIONS
         if description.exists_fn(dev)
     )
+    async_add_entities(switch_entities(devices, coordinator))
 
 
 class VeSyncSwitchEntity(SwitchEntity, VeSyncBaseEntity[VeSyncBaseDevice]):
