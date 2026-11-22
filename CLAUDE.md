@@ -168,6 +168,11 @@ A rejected command raises `HomeAssistantError` and changes nothing.
      the Levoit account ID and login token.
 4. **Not started:**
    - Humidity calibration (see above for the command names).
+   - Off timer in hours and minutes, like the app's picker. Deferred by the
+     owner until we build their humidifier dashboard card. Plan: a
+     `vesync.set_off_timer` action with a duration (h/min) field, run from a
+     dashboard button that opens a popup with the picker. Keep the Off timer
+     number for showing the time left and cancelling.
 
 ## Owner's HA setup (context)
 
