@@ -1,1 +1,18 @@
 update_devices:
+
+send_command:
+  fields:
+    device_id:
+      required: true
+      selector:
+        device:
+          integration: vesync
+    method:
+      required: true
+      example: setDryingMode
+      selector:
+        text:
+    data:
+      example: '{"dryingLevel": 1}'
+      selector:
+        object:

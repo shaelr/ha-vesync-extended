@@ -208,6 +208,24 @@
     }
   },
   "services": {
+    "send_command": {
+      "description": "Developer tool. Sends a raw command to a VeSync device and returns the reply and the status read right after. Used to work out commands the integration does not support yet.",
+      "fields": {
+        "data": {
+          "description": "The command's data, as an object.",
+          "name": "Data"
+        },
+        "device_id": {
+          "description": "The VeSync device to send the command to.",
+          "name": "Device"
+        },
+        "method": {
+          "description": "The command name, such as setDryingMode.",
+          "name": "Method"
+        }
+      },
+      "name": "Send command"
+    },
     "update_devices": {
       "description": "Adds new VeSync devices to Home Assistant.",
       "name": "Update devices"

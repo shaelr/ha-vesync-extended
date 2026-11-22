@@ -13,9 +13,22 @@ close to Home Assistant core and is easy to rebase.
 import logging
 from typing import Any
 
+import probatio
 from pyvesync.base_devices.vesyncbasedevice import VeSyncBaseDevice
 from pyvesync.devices.vesynchumidifier import VeSyncSuperior6000S
 from pyvesync.utils.helpers import Helpers
+
+from homeassistant.core import (
+    HomeAssistant,
+    ServiceCall,
+    ServiceResponse,
+    SupportsResponse,
+    callback,
+)
+from homeassistant.exceptions import ServiceValidationError
+from homeassistant.helpers import config_validation as cv, device_registry as dr
+
+from .const import DOMAIN
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -167,3 +180,78 @@ async def async_set_drying_level(device: VeSyncBaseDevice, level: int) -> bool:
         return False
     device.state.drying_mode_level = level
     return True
+
+
+# Developer action: send any bypass V2 command to a device and return the
+# reply plus the status read right after. Used to work out commands pyvesync
+# does not know, such as starting drying on the 6000S.
+SERVICE_SEND_COMMAND = "send_command"
+ATTR_DEVICE_ID = "device_id"
+ATTR_METHOD = "method"
+ATTR_DATA = "data"
+
+SEND_COMMAND_SCHEMA = probatio.Schema(
+    {
+        probatio.Required(ATTR_DEVICE_ID): cv.string,
+        probatio.Required(ATTR_METHOD): cv.string,
+        probatio.Optional(ATTR_DATA, default={}): dict,
+    }
+)
+
+
+def _find_device(hass: HomeAssistant, device_id: str) -> tuple[Any, VeSyncBaseDevice]:
+    """Return (coordinator, pyvesync device) for a Home Assistant device id."""
+    entry = dr.async_get(hass).async_get(device_id)
+    if entry is None:
+        raise ServiceValidationError(f"Unknown device {device_id}")
+    ids = {ident for domain, ident in entry.identifiers if domain == DOMAIN}
+    for config_entry in hass.config_entries.async_loaded_entries(DOMAIN):
+        coordinator = config_entry.runtime_data
+        for device in coordinator.manager.devices:
+            uid = device.cid
+            if isinstance(device.sub_device_no, int):
+                uid = f"{device.cid}{device.sub_device_no!s}"
+            if uid in ids:
+                return coordinator, device
+    raise ServiceValidationError(f"{entry.name} is not a loaded VeSync device")
+
+
+async def _async_handle_send_command(call: ServiceCall) -> ServiceResponse:
+    """Send one bypass V2 command and report what came back."""
+    coordinator, device = _find_device(call.hass, call.data[ATTR_DEVICE_ID])
+    method: str = call.data[ATTR_METHOD]
+    data: dict[str, Any] = call.data[ATTR_DATA]
+    if not hasattr(device, "call_bypassv2_api"):
+        raise ServiceValidationError(f"{device.device_name} has no bypass V2 API")
+
+    _LOGGER.warning("send_command to %s: %s %s", device.device_name, method, data)
+    response = await device.call_bypassv2_api(method, data)
+    reply: dict[str, Any] = {"method": method, "data": data}
+    if isinstance(response, dict):
+        reply["code"] = response.get("code")
+        reply["msg"] = response.get("msg")
+        outer = response.get("result")
+        if isinstance(outer, dict):
+            reply["device_code"] = outer.get("code")
+            reply["result"] = outer.get("result")
+    else:
+        reply["code"] = None
+
+    # Read the status back so the effect of the command is visible at once.
+    await device.update()
+    reply["status"] = extract_status(device)
+    coordinator.capture_extra_status()
+    coordinator.async_update_listeners()
+    return reply
+
+
+@callback
+def async_setup_send_command(hass: HomeAssistant) -> None:
+    """Register the send_command developer action."""
+    hass.services.async_register(
+        DOMAIN,
+        SERVICE_SEND_COMMAND,
+        _async_handle_send_command,
+        schema=SEND_COMMAND_SCHEMA,
+        supports_response=SupportsResponse.ONLY,
+    )

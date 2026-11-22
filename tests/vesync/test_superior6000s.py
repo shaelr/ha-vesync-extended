@@ -18,10 +18,12 @@ from homeassistant.components.select import (
     DOMAIN as SELECT_DOMAIN,
     SERVICE_SELECT_OPTION,
 )
+from homeassistant.components.vesync.const import DOMAIN
 from homeassistant.components.vesync.superior6000s import extract_status
 from homeassistant.const import ATTR_ENTITY_ID
 from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
+from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
+from homeassistant.helpers import device_registry as dr
 
 from .common import mock_devices_response
 
@@ -288,3 +290,50 @@ async def test_reset_filter_rejected(
             blocking=True,
         )
     assert hass.states.get(FILTER_LIFE).state == "77"
+
+
+async def test_send_command(
+    hass: HomeAssistant,
+    config_entry: MockConfigEntry,
+    aioclient_mock: AiohttpClientMocker,
+    device_registry: dr.DeviceRegistry,
+) -> None:
+    """send_command sends the raw command and returns the reply and status."""
+    await _setup(hass, config_entry, aioclient_mock)
+    device = next(entry for entry in device_registry.devices if entry.name == DEVICE)
+    aioclient_mock.mock_calls.clear()
+
+    reply = await hass.services.async_call(
+        DOMAIN,
+        "send_command",
+        {
+            "device_id": device.id,
+            "method": "setDryingMode",
+            "data": {"dryingLevel": 1},
+        },
+        blocking=True,
+        return_response=True,
+    )
+
+    assert ("setDryingMode", {"dryingLevel": 1}) in _sent(aioclient_mock)
+    assert reply["method"] == "setDryingMode"
+    assert reply["code"] == 0
+    assert reply["status"]["filterLifePercent"] == 77
+
+
+async def test_send_command_unknown_device(
+    hass: HomeAssistant,
+    config_entry: MockConfigEntry,
+    aioclient_mock: AiohttpClientMocker,
+) -> None:
+    """send_command refuses a device id that is not a VeSync device."""
+    await _setup(hass, config_entry, aioclient_mock)
+
+    with pytest.raises(ServiceValidationError):
+        await hass.services.async_call(
+            DOMAIN,
+            "send_command",
+            {"device_id": "nope", "method": "resetFilter"},
+            blocking=True,
+            return_response=True,
+        )

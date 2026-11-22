@@ -34,6 +34,10 @@ only get small hooks:
   called in `__init__` and after `update_all_devices()`.
 - `sensor.py`, `number.py`, `select.py`, `button.py`: one
   `async_add_entities(<x>_entities(devices, coordinator))` line each.
+- `services.py`: one `async_setup_send_command(hass)` line. The
+  `vesync.send_command` developer action (device, method, data) sends any
+  bypass V2 command and returns the reply plus the status read right after.
+  It exists to work out unknown commands through HA.
 - `binary_sensor.py`: the `auto_stop_target_reached` description (all
   humidifiers, not just the 6000S).
 - `humidifier.py`: device mode `manual` maps to HA mode `manual` (core maps it
@@ -68,7 +72,7 @@ tests into it, builds translations, then runs ruff and pytest. The PyPI
 `pytest-homeassistant-custom-component` package stops at HA 2026.2, which is
 why the tests run inside core instead.
 
-Expected: **216 passed**. When the snapshot files change, check the diff only
+Expected: **218 passed**. When the snapshot files change, check the diff only
 adds or changes what you meant to.
 
 If the format check fails, run `.ha-core/.venv/bin/ruff format

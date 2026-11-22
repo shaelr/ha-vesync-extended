@@ -7,6 +7,7 @@ from homeassistant.helpers.dispatcher import async_dispatcher_send
 
 from .const import DOMAIN, SERVICE_UPDATE_DEVS, VS_DEVICES, VS_DISCOVERY
 from .coordinator import VesyncConfigEntry
+from .superior6000s import async_setup_send_command
 
 
 @callback
@@ -16,6 +17,7 @@ def async_setup_services(hass: HomeAssistant) -> None:
     hass.services.async_register(
         DOMAIN, SERVICE_UPDATE_DEVS, async_new_device_discovery
     )
+    async_setup_send_command(hass)
 
 
 async def async_new_device_discovery(call: ServiceCall) -> None:

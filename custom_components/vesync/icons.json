@@ -62,6 +62,9 @@
     }
   },
   "services": {
+    "send_command": {
+      "service": "mdi:console"
+    },
     "update_devices": {
       "service": "mdi:update"
     }
