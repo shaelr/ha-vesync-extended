@@ -8,6 +8,12 @@ from pytest_homeassistant.common import MockConfigEntry
 from pytest_homeassistant.test_util.aiohttp import AiohttpClientMocker
 
 from homeassistant.components.button import DOMAIN as BUTTON_DOMAIN, SERVICE_PRESS
+from homeassistant.components.humidifier import (
+    ATTR_AVAILABLE_MODES,
+    ATTR_MODE,
+    DOMAIN as HUMIDIFIER_DOMAIN,
+    SERVICE_SET_MODE,
+)
 from homeassistant.components.number import (
     ATTR_VALUE,
     DOMAIN as NUMBER_DOMAIN,
@@ -185,8 +191,17 @@ DRYING = {
         "dryingRemain": 1800,
     }
 }
-START_DRYING = "button.humidifier_6000s_start_drying"
-STOP_DRYING = "button.humidifier_6000s_stop_drying"
+HUMIDIFIER = "humidifier.humidifier_6000s"
+DRYING_STATUS = "sensor.humidifier_6000s_drying_status"
+
+
+async def _set_mode(hass: HomeAssistant, mode: str) -> None:
+    await hass.services.async_call(
+        HUMIDIFIER_DOMAIN,
+        SERVICE_SET_MODE,
+        {ATTR_ENTITY_ID: HUMIDIFIER, ATTR_MODE: mode},
+        blocking=True,
+    )
 
 
 @pytest.fixture(autouse=True)
@@ -217,14 +232,12 @@ async def test_drying_level_while_idle(
     assert _sent(aioclient_mock) == []
     assert hass.states.get(DRYING_LEVEL).state == "high"
 
-    await hass.services.async_call(
-        BUTTON_DOMAIN, SERVICE_PRESS, {ATTR_ENTITY_ID: START_DRYING}, blocking=True
-    )
+    await _set_mode(hass, "dry")
 
     assert ("setDryingMode", {"autoDryingSwitch": 1, "dryingLevel": 2}) in _sent(
         aioclient_mock
     )
-    assert hass.states.get("sensor.humidifier_6000s_drying_status").state == "drying"
+    assert hass.states.get(DRYING_STATUS).state == "drying"
 
 
 async def test_drying_level_while_drying(
@@ -250,49 +263,51 @@ async def test_drying_level_while_drying(
     assert hass.states.get(DRYING_LEVEL).state == "low"
 
 
-async def test_start_drying(
+async def test_dry_mode(
     hass: HomeAssistant,
     config_entry: MockConfigEntry,
     aioclient_mock: AiohttpClientMocker,
 ) -> None:
-    """Start drying sends setDryingMode with the device's level."""
+    """The dry mode sends setDryingMode with the device's level."""
     await _setup(hass, config_entry, aioclient_mock)
+    state = hass.states.get(HUMIDIFIER)
+    assert "dry" in state.attributes[ATTR_AVAILABLE_MODES]
+    assert state.attributes[ATTR_MODE] == "humidity"
     aioclient_mock.mock_calls.clear()
 
-    await hass.services.async_call(
-        BUTTON_DOMAIN, SERVICE_PRESS, {ATTR_ENTITY_ID: START_DRYING}, blocking=True
-    )
+    await _set_mode(hass, "dry")
 
     assert ("setDryingMode", {"autoDryingSwitch": 1, "dryingLevel": 1}) in _sent(
         aioclient_mock
     )
-    assert hass.states.get("sensor.humidifier_6000s_drying_status").state == "drying"
+    assert hass.states.get(DRYING_STATUS).state == "drying"
+    assert hass.states.get(HUMIDIFIER).attributes[ATTR_MODE] == "dry"
 
 
-async def test_stop_drying(
+async def test_leave_dry_mode(
     hass: HomeAssistant,
     config_entry: MockConfigEntry,
     aioclient_mock: AiohttpClientMocker,
 ) -> None:
-    """Stop drying sends the current work mode again."""
+    """Choosing a real mode while drying sends it, which stops drying."""
     await _setup(hass, config_entry, aioclient_mock, DRYING)
-    assert hass.states.get("sensor.humidifier_6000s_drying_status").state == "drying"
+    assert hass.states.get(DRYING_STATUS).state == "drying"
+    assert hass.states.get(HUMIDIFIER).attributes[ATTR_MODE] == "dry"
     aioclient_mock.mock_calls.clear()
 
-    await hass.services.async_call(
-        BUTTON_DOMAIN, SERVICE_PRESS, {ATTR_ENTITY_ID: STOP_DRYING}, blocking=True
-    )
+    await _set_mode(hass, "humidity")
 
     assert ("setHumidityMode", {"workMode": "humidity"}) in _sent(aioclient_mock)
-    assert hass.states.get("sensor.humidifier_6000s_drying_status").state == "stopped"
+    assert hass.states.get(DRYING_STATUS).state == "stopped"
+    assert hass.states.get(HUMIDIFIER).attributes[ATTR_MODE] == "humidity"
 
 
-async def test_start_drying_rejected(
+async def test_dry_mode_rejected(
     hass: HomeAssistant,
     config_entry: MockConfigEntry,
     aioclient_mock: AiohttpClientMocker,
 ) -> None:
-    """A rejected start raises an error and leaves the status alone."""
+    """A rejected dry mode raises an error and leaves the status alone."""
     await _setup(hass, config_entry, aioclient_mock)
     aioclient_mock.clear_requests()
     aioclient_mock.post(
@@ -306,10 +321,8 @@ async def test_start_drying_rejected(
     )
 
     with pytest.raises(HomeAssistantError):
-        await hass.services.async_call(
-            BUTTON_DOMAIN, SERVICE_PRESS, {ATTR_ENTITY_ID: START_DRYING}, blocking=True
-        )
-    assert hass.states.get("sensor.humidifier_6000s_drying_status").state == "stopped"
+        await _set_mode(hass, "dry")
+    assert hass.states.get(DRYING_STATUS).state == "stopped"
 
 
 async def test_drying_status_states(
@@ -320,7 +333,7 @@ async def test_drying_status_states(
     """Drying status maps dryingState to idle, drying or stopped."""
     await _setup(hass, config_entry, aioclient_mock, DRYING)
 
-    assert hass.states.get("sensor.humidifier_6000s_drying_status").state == "drying"
+    assert hass.states.get(DRYING_STATUS).state == "drying"
     assert (
         float(hass.states.get("sensor.humidifier_6000s_drying_time_remaining").state)
         == 30

@@ -42,7 +42,10 @@ only get small hooks:
   humidifiers, not just the 6000S).
 - `humidifier.py`: device mode `manual` maps to HA mode `manual` (core maps it
   to `normal`). The owner wants the real name everywhere. Fans keep their real
-  `normal` preset; don't touch that.
+  `normal` preset; don't touch that. It also adds a `dry` mode for the 6000S
+  (the `MODE_DRY`/`dry_mode_*` hooks from `extra_entities.py`): it shows while
+  `dryingState == 1`, choosing it starts drying, and choosing a real mode
+  while drying records the cycle as stopped.
 - `strings.json`, `translations/en.json`, `icons.json`, `manifest.json`.
 
 Keep it that way so a future HA release can be pulled in by re-copying core's
@@ -83,8 +86,8 @@ snapshots are copied back into `tests/vesync/snapshots/` automatically.
 
 Read from HA diagnostics while the owner used the Levoit app:
 
-- `workMode` stays `manual` while drying. **Dry is not a mode**, so it can't go
-  in the humidifier's mode list.
+- `workMode` stays `manual` while drying. **Dry is not a device mode.** The
+  HA `dry` mode is made up by us from `dryingState` (owner's request).
 - `dryingMode.dryingState`: `1` = drying, `2` = stopped (a cycle finished,
   with `dryingRemain` back at 7200, or was stopped part way, keeping the time
   left). pyvesync calls 2 "pause". `0` is assumed to be idle.
@@ -95,7 +98,7 @@ Read from HA diagnostics while the owner used the Levoit app:
 - **Stop drying:** `setHumidityMode {"workMode": <current mode>}`. Sending
   the mode the device is already in ends the cycle, as the app does.
 - So the Drying level select must not send anything while idle; it only
-  remembers the level the Start drying button will use.
+  remembers the level the `dry` mode will use.
 - `setWaterShortageDrying` rejected `{"waterShortageDryingSwitch":1}` and
   `{"switch":1}` (code 11000000), and `setDryingMode` ignores that field.
 - `dryingMode.dryingLevel`: `1` = Low, `2` = High. Switching to High mid-cycle
@@ -127,8 +130,8 @@ A rejected command raises `HomeAssistantError` and changes nothing.
    (type Integration), download, restart HA.
 2. **Test the experimental commands on the humidifier.** Filter life went
    from 99% to 100% on 2026-11-22, but it isn't known whether HA's Reset
-   filter did that. Set a 1-hour off timer and cancel it. Test the Start/Stop
-   drying buttons from HA.
+   filter did that. Set a 1-hour off timer and cancel it. Test the `dry` mode
+   from HA, and leaving it by choosing Manual.
 3. **Real commands for filter reset** (drying is now known, see above). Traffic capture
    failed (2026-11-22): the VeSync app (iOS build 6.0.11, run on the Mac)
    pins certificates for every VeSync host, so mitmproxy saw nothing. Don't

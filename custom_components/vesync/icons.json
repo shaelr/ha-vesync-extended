@@ -11,12 +11,6 @@
     "button": {
       "reset_filter": {
         "default": "mdi:air-filter"
-      },
-      "start_drying": {
-        "default": "mdi:fan-chevron-up"
-      },
-      "stop_drying": {
-        "default": "mdi:fan-off"
       }
     },
     "fan": {

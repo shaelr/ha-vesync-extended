@@ -502,6 +502,7 @@
       'capabilities': dict({
         <HumidifierEntityCapabilityAttribute.AVAILABLE_MODES: 'available_modes'>: list([
           'auto',
+          'dry',
           'humidity',
           'manual',
           'sleep',
@@ -545,6 +546,7 @@
     'attributes': ReadOnlyDict({
       <HumidifierEntityCapabilityAttribute.AVAILABLE_MODES: 'available_modes'>: list([
         'auto',
+        'dry',
         'humidity',
         'manual',
         'sleep',

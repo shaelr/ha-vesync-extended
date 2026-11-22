@@ -51,12 +51,6 @@
     "button": {
       "reset_filter": {
         "name": "Reset filter"
-      },
-      "start_drying": {
-        "name": "Start drying"
-      },
-      "stop_drying": {
-        "name": "Stop drying"
       }
     },
     "fan": {
@@ -80,6 +74,7 @@
         "state_attributes": {
           "mode": {
             "state": {
+              "dry": "Dry",
               "humidity": "Humidity",
               "manual": "Manual"
             }

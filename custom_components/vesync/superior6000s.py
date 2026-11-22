@@ -176,6 +176,8 @@ async def async_start_drying(device: VeSyncBaseDevice, level: int) -> bool:
     Confirmed on a real 6000S: any setDryingMode that includes dryingLevel
     starts drying (the app's Dry button). Without dryingLevel it only sets
     autoDryingSwitch. The current autoDryingSwitch is sent back unchanged.
+    Drying stops when any mode is set with setHumidityMode, even the current
+    one.
     """
     switch = 1 if getattr(device.state, "drying_mode_auto_switch", None) == "on" else 0
     result = await _call(
@@ -187,15 +189,6 @@ async def async_start_drying(device: VeSyncBaseDevice, level: int) -> bool:
         return False
     device.state.drying_mode_level = level
     return True
-
-
-async def async_stop_drying(device: VeSyncBaseDevice, work_mode: str) -> bool:
-    """Stop drying by setting the work mode again, as the app does.
-
-    Confirmed on a real 6000S: workMode stays the same while drying, and
-    sending it again with setHumidityMode ends the cycle.
-    """
-    return await _call(device, "setHumidityMode", {"workMode": work_mode}) is not None
 
 
 # Developer action: send any bypass V2 command to a device and return the

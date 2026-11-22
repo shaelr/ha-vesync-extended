@@ -27,6 +27,13 @@ from .const import (
 )
 from .coordinator import VesyncConfigEntry, VeSyncDataCoordinator
 from .entity import VeSyncBaseEntity
+from .extra_entities import (
+    MODE_DRY,
+    async_start_dry_mode,
+    dry_mode_active,
+    dry_mode_left,
+    dry_mode_supported,
+)
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -125,6 +132,8 @@ class VeSyncHumidifierHA(VeSyncBaseEntity[VeSyncHumidifier], HumidifierEntity):
             if ha_mode:
                 self._available_modes.append(ha_mode)
                 self._ha_to_vs_mode_map[ha_mode] = vs_mode
+        if dry_mode_supported(device, coordinator):
+            self._available_modes.append(MODE_DRY)
 
         self._available_modes.sort()
 
@@ -157,6 +166,8 @@ class VeSyncHumidifierHA(VeSyncBaseEntity[VeSyncHumidifier], HumidifierEntity):
     @override
     def mode(self) -> str | None:
         """Get the current preset mode."""
+        if dry_mode_active(self.device, self.coordinator):
+            return MODE_DRY
         return (
             None
             if self.device.state.mode is None
@@ -178,6 +189,9 @@ class VeSyncHumidifierHA(VeSyncBaseEntity[VeSyncHumidifier], HumidifierEntity):
             raise HomeAssistantError(
                 f"Invalid mode {mode}. Available modes: {self.available_modes}"
             )
+        if mode == MODE_DRY:
+            await async_start_dry_mode(self.device, self.coordinator)
+            return
         set_mode = self._get_vs_mode(mode)
         if set_mode is None:
             raise HomeAssistantError(f"Could not map mode {mode} to VeSync mode.")
@@ -185,6 +199,7 @@ class VeSyncHumidifierHA(VeSyncBaseEntity[VeSyncHumidifier], HumidifierEntity):
             if self.device.last_response:
                 raise HomeAssistantError(self.device.last_response.message)
             raise HomeAssistantError("Failed to set mode.")
+        dry_mode_left(self.device, self.coordinator)
 
         if mode == MODE_SLEEP:
             # We successfully changed the mode. Consider it

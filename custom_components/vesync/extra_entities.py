@@ -22,6 +22,7 @@ from homeassistant.components.sensor import (
     SensorStateClass,
 )
 from homeassistant.const import EntityCategory, UnitOfTime
+from homeassistant.core import callback
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.typing import StateType
 
@@ -38,13 +39,12 @@ from .superior6000s import (
     async_reset_filter,
     async_set_off_timer,
     async_start_drying,
-    async_stop_drying,
     is_superior_6000s,
 )
 
 # Drying level picked in Home Assistant while the humidifier is not drying,
 # keyed by cid. Sending a level starts drying, so it is kept here and used
-# by the Start drying button instead.
+# when the humidifier's dry mode is chosen.
 _planned_level: dict[str, int] = {}
 
 
@@ -266,7 +266,7 @@ def _is_drying(status: dict[str, Any]) -> bool:
 
 
 def _level_to_use(cid: str, status: dict[str, Any]) -> int:
-    """Return the level Start drying will use."""
+    """Return the level the dry mode will use."""
     if cid in _planned_level:
         return _planned_level[cid]
     level = _int(_drying(status).get("dryingLevel"))
@@ -277,7 +277,7 @@ class VeSyncDryingLevelSelect(VeSyncExtraEntity, SelectEntity):
     """Drying level (low or high).
 
     While drying this changes the level of the running cycle. Otherwise it
-    only sets the level Start drying uses, because sending a level to the
+    only sets the level the dry mode uses, because sending a level to the
     humidifier starts drying.
     """
 
@@ -293,7 +293,7 @@ class VeSyncDryingLevelSelect(VeSyncExtraEntity, SelectEntity):
     @property
     @override
     def current_option(self) -> str | None:
-        """Return the running level, or the level Start drying will use."""
+        """Return the running level, or the level the dry mode will use."""
         if _is_drying(self.status):
             return _lookup(DRYING_LEVELS, _drying(self.status).get("dryingLevel"))
         return DRYING_LEVELS.get(_level_to_use(self.device.cid, self.status))
@@ -313,50 +313,55 @@ class VeSyncDryingLevelSelect(VeSyncExtraEntity, SelectEntity):
         self._optimistic(dryingMode=drying)
 
 
-class VeSyncStartDryingButton(VeSyncExtraEntity, ButtonEntity):
-    """Start drying, like the app's Dry button."""
+# Dry mode on the humidifier entity. Dry is not a device mode (workMode stays
+# the same while drying), so humidifier.py adds it to the mode list and calls
+# these. Picking any real mode while drying sends that mode, which stops it.
 
-    _attr_translation_key = "start_drying"
-
-    def __init__(
-        self, device: VeSyncBaseDevice, coordinator: VeSyncDataCoordinator
-    ) -> None:
-        """Initialize the button."""
-        super().__init__(device, "start_drying", coordinator)
-
-    @override
-    async def async_press(self) -> None:
-        """Start drying at the chosen level."""
-        level = _level_to_use(self.device.cid, self.status)
-        if not await async_start_drying(self.device, level):
-            raise HomeAssistantError("The humidifier did not start drying")
-        drying = dict(_drying(self.status))
-        drying.update(dryingLevel=level, dryingState=DRYING_STATE_DRYING)
-        self._optimistic(dryingMode=drying)
+MODE_DRY = "dry"
 
 
-class VeSyncStopDryingButton(VeSyncExtraEntity, ButtonEntity):
-    """Stop drying and go back to the current mode."""
+def dry_mode_supported(
+    device: VeSyncBaseDevice, coordinator: VeSyncDataCoordinator
+) -> bool:
+    """Return True if the humidifier entity should offer the dry mode."""
+    return is_superior_6000s(device) and "dryingState" in _drying(
+        _status(device, coordinator)
+    )
 
-    _attr_translation_key = "stop_drying"
 
-    def __init__(
-        self, device: VeSyncBaseDevice, coordinator: VeSyncDataCoordinator
-    ) -> None:
-        """Initialize the button."""
-        super().__init__(device, "stop_drying", coordinator)
+def dry_mode_active(
+    device: VeSyncBaseDevice, coordinator: VeSyncDataCoordinator
+) -> bool:
+    """Return True if the humidifier is drying."""
+    return is_superior_6000s(device) and _is_drying(_status(device, coordinator))
 
-    @override
-    async def async_press(self) -> None:
-        """Stop drying."""
-        work_mode = self.status.get("workMode")
-        if not isinstance(work_mode, str) or not work_mode:
-            raise HomeAssistantError("The humidifier's current mode is unknown")
-        if not await async_stop_drying(self.device, work_mode):
-            raise HomeAssistantError("The humidifier did not stop drying")
-        drying = dict(_drying(self.status))
-        drying["dryingState"] = DRYING_STATE_STOPPED
-        self._optimistic(dryingMode=drying)
+
+async def async_start_dry_mode(
+    device: VeSyncBaseDevice, coordinator: VeSyncDataCoordinator
+) -> None:
+    """Start drying at the level shown by the Drying level select."""
+    status = _status(device, coordinator)
+    level = _level_to_use(device.cid, status)
+    if not await async_start_drying(device, level):
+        raise HomeAssistantError("The humidifier did not start drying")
+    _set_drying(coordinator, device, dryingLevel=level, dryingState=DRYING_STATE_DRYING)
+
+
+@callback
+def dry_mode_left(device: VeSyncBaseDevice, coordinator: VeSyncDataCoordinator) -> None:
+    """Record that setting a real mode has stopped a running cycle."""
+    if dry_mode_active(device, coordinator):
+        _set_drying(coordinator, device, dryingState=DRYING_STATE_STOPPED)
+
+
+def _set_drying(
+    coordinator: VeSyncDataCoordinator, device: VeSyncBaseDevice, **changes: Any
+) -> None:
+    """Apply a dryingMode change to the stored status until the next poll."""
+    status = coordinator.extra_status.get(device.cid)
+    if status is not None:
+        status["dryingMode"] = {**_drying(status), **changes}
+    coordinator.async_update_listeners()
 
 
 # Filter reset
@@ -437,16 +442,9 @@ def button_entities(
     devices: Any, coordinator: VeSyncDataCoordinator
 ) -> list[ButtonEntity]:
     """Return the extra buttons for these devices."""
-    buttons: list[ButtonEntity] = [
+    return [
         VeSyncResetFilterButton(dev, coordinator)
         for dev in devices
         if is_superior_6000s(dev)
         and getattr(dev.state, "filter_life", None) is not None
     ]
-    for dev in devices:
-        if is_superior_6000s(dev) and "dryingState" in _drying(
-            _status(dev, coordinator)
-        ):
-            buttons.append(VeSyncStartDryingButton(dev, coordinator))
-            buttons.append(VeSyncStopDryingButton(dev, coordinator))
-    return buttons
