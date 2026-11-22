@@ -51,6 +51,12 @@
     "button": {
       "reset_filter": {
         "name": "Reset filter"
+      },
+      "start_drying": {
+        "name": "Start drying"
+      },
+      "stop_drying": {
+        "name": "Stop drying"
       }
     },
     "fan": {
@@ -145,9 +151,9 @@
       "drying_status": {
         "name": "Drying status",
         "state": {
-          "complete": "Complete",
           "drying": "Drying",
-          "idle": "Idle"
+          "idle": "Idle",
+          "stopped": "Stopped"
         }
       },
       "drying_time_remaining": {

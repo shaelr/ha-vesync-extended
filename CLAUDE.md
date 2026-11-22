@@ -72,7 +72,7 @@ tests into it, builds translations, then runs ruff and pytest. The PyPI
 `pytest-homeassistant-custom-component` package stops at HA 2026.2, which is
 why the tests run inside core instead.
 
-Expected: **218 passed**. When the snapshot files change, check the diff only
+Expected: **222 passed**. When the snapshot files change, check the diff only
 adds or changes what you meant to.
 
 If the format check fails, run `.ha-core/.venv/bin/ruff format
@@ -85,9 +85,19 @@ Read from HA diagnostics while the owner used the Levoit app:
 
 - `workMode` stays `manual` while drying. **Dry is not a mode**, so it can't go
   in the humidifier's mode list.
-- `dryingMode.dryingState`: `1` = drying, `2` = complete (an earlier cycle
-  finished; `dryingRemain` resets to 7200). pyvesync calls 2 "pause", which is
-  wrong for this device. `0` is assumed to be idle.
+- `dryingMode.dryingState`: `1` = drying, `2` = stopped (a cycle finished,
+  with `dryingRemain` back at 7200, or was stopped part way, keeping the time
+  left). pyvesync calls 2 "pause". `0` is assumed to be idle.
+- **Start drying** (sent through `vesync.send_command`, confirmed in the app):
+  any `setDryingMode` that includes `dryingLevel` starts a cycle, with or
+  without `afterDryState`. `setDryingMode {"autoDryingSwitch": x}` alone does
+  not start drying. While drying, the same command changes the level.
+- **Stop drying:** `setHumidityMode {"workMode": <current mode>}`. Sending
+  the mode the device is already in ends the cycle, as the app does.
+- So the Drying level select must not send anything while idle; it only
+  remembers the level the Start drying button will use.
+- `setWaterShortageDrying` rejected `{"waterShortageDryingSwitch":1}` and
+  `{"switch":1}` (code 11000000), and `setDryingMode` ignores that field.
 - `dryingMode.dryingLevel`: `1` = Low, `2` = High. Switching to High mid-cycle
   dropped the time left from ~1 h 54 m to ~26 min.
 - `totalWorkTime` is in **seconds** (went up ~2 h between two reads 2 h
@@ -106,7 +116,6 @@ other Levoit models:
 | Feature | Command sent |
 | --- | --- |
 | Off timer | `addTimerV2` `{"startAct":[{"type":"powerSwitch","num":0,"act":0}],"total":<s>}`, falls back to `addTimer` `{"action":"off","total":<s>}`. Cancel uses `getTimerV2`/`delTimerV2` or `getTimer`/`delTimer` |
-| Drying level | `setDryingMode` `{"autoDryingSwitch":<current>,"dryingLevel":1\|2}` |
 | Reset filter | `resetFilter` `{}` (the command Levoit air purifiers use) |
 
 A rejected command raises `HomeAssistantError` and changes nothing.
@@ -116,10 +125,11 @@ A rejected command raises `HomeAssistantError` and changes nothing.
 1. **Install through HACS.** Pushed to `shaelr/ha-vesync-extended` on
    2026-11-22; Tests and Validate pass. Add it in HACS as a custom repository
    (type Integration), download, restart HA.
-2. **Test the experimental commands on the humidifier.** The filter is at 99%,
-   so a working Reset filter just shows 100%. Set a 1-hour off timer and
-   cancel it. Switch drying level.
-3. **Real commands for filter reset and start drying.** Traffic capture
+2. **Test the experimental commands on the humidifier.** Filter life went
+   from 99% to 100% on 2026-11-22, but it isn't known whether HA's Reset
+   filter did that. Set a 1-hour off timer and cancel it. Test the Start/Stop
+   drying buttons from HA.
+3. **Real commands for filter reset** (drying is now known, see above). Traffic capture
    failed (2026-11-22): the VeSync app (iOS build 6.0.11, run on the Mac)
    pins certificates for every VeSync host, so mitmproxy saw nothing. Don't
    retry the capture. Instead, the app binary's strings were read
@@ -131,11 +141,9 @@ A rejected command raises `HomeAssistantError` and changes nothing.
    `setLightStatus`, `setSnoozeSwitch`, scene/schedule methods,
    `setDryingMode`, `setSelfCleanMode`, `setDirtyWaterClean`, `resetSensor`,
    `setSensorCalibrationValue`.
-   - **Start/stop drying** is `setDryingMode` with the fields `dryingLevel`,
-     `autoDryingSwitch`, `afterDryState`, `exitDryState` (ints). The app
-     offers "dry then humidify" and "dry then power off", which are probably
-     the `afterDryState` values. The numbers aren't readable from strings, so
-     they have to be tried on the device (`dryingState == 1` confirms).
+   - `setDryingMode` also has `afterDryState` and `exitDryState` (ints). The
+     app offers "dry then humidify" and "dry then power off", probably the
+     `afterDryState` values. Which numbers mean what is still unknown.
    - **Filter reset:** there's no filter command in the Kotlin list. The older
      Swift humidifier method list has `resetFilter`, which we already send.
      Unconfirmed.

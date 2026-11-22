@@ -1767,7 +1767,7 @@
         <SensorEntityCapabilityAttribute.OPTIONS: 'options'>: list([
           'idle',
           'drying',
-          'complete',
+          'stopped',
         ]),
       }),
       'config_entry_id': <ANY>,
@@ -1963,7 +1963,7 @@
       <SensorEntityCapabilityAttribute.OPTIONS: 'options'>: list([
         'idle',
         'drying',
-        'complete',
+        'stopped',
       ]),
     }),
     'context': <ANY>,
@@ -1971,7 +1971,7 @@
     'last_changed': <ANY>,
     'last_reported': <ANY>,
     'last_updated': <ANY>,
-    'state': 'complete',
+    'state': 'stopped',
   })
 # ---
 # name: test_sensor_state[Humidifier 6000s][sensor.humidifier_6000s_drying_time_remaining]

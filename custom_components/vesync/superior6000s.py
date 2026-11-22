@@ -36,10 +36,12 @@ _LOGGER = logging.getLogger(__name__)
 # response saved on the device is a status poll and not a command reply.
 _STATUS_KEYS = ("powerSwitch", "filterLifePercent", "workMode")
 
-# dryingMode.dryingState. Seen on a real 6000S: 2 with a full dryingRemain
-# while idle after an earlier cycle, then 1 counting down once drying starts.
-# pyvesync calls 2 "pause"; "complete" matches what the device actually does.
-DRYING_STATES: dict[int, str] = {0: "idle", 1: "drying", 2: "complete"}
+# dryingMode.dryingState. Seen on a real 6000S: 1 while drying, 2 once a
+# cycle has finished (dryingRemain back at 7200) or was stopped part way
+# (dryingRemain keeps the time that was left). 0 is assumed to be idle.
+DRYING_STATES: dict[int, str] = {0: "idle", 1: "drying", 2: "stopped"}
+DRYING_STATE_DRYING = 1
+DRYING_STATE_STOPPED = 2
 
 # dryingMode.dryingLevel. The device and manual offer Low and High.
 DRYING_LEVELS: dict[int, str] = {1: "low", 2: "high"}
@@ -168,8 +170,13 @@ async def async_reset_filter(device: VeSyncBaseDevice) -> bool:
     return True
 
 
-async def async_set_drying_level(device: VeSyncBaseDevice, level: int) -> bool:
-    """Set the drying level, keeping the current drying on/off setting."""
+async def async_start_drying(device: VeSyncBaseDevice, level: int) -> bool:
+    """Start drying at ``level``, or change the level of a running cycle.
+
+    Confirmed on a real 6000S: any setDryingMode that includes dryingLevel
+    starts drying (the app's Dry button). Without dryingLevel it only sets
+    autoDryingSwitch. The current autoDryingSwitch is sent back unchanged.
+    """
     switch = 1 if getattr(device.state, "drying_mode_auto_switch", None) == "on" else 0
     result = await _call(
         device,
@@ -180,6 +187,15 @@ async def async_set_drying_level(device: VeSyncBaseDevice, level: int) -> bool:
         return False
     device.state.drying_mode_level = level
     return True
+
+
+async def async_stop_drying(device: VeSyncBaseDevice, work_mode: str) -> bool:
+    """Stop drying by setting the work mode again, as the app does.
+
+    Confirmed on a real 6000S: workMode stays the same while drying, and
+    sending it again with setHumidityMode ends the cycle.
+    """
+    return await _call(device, "setHumidityMode", {"workMode": work_mode}) is not None
 
 
 # Developer action: send any bypass V2 command to a device and return the

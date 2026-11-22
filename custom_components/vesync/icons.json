@@ -11,6 +11,12 @@
     "button": {
       "reset_filter": {
         "default": "mdi:air-filter"
+      },
+      "start_drying": {
+        "default": "mdi:fan-chevron-up"
+      },
+      "stop_drying": {
+        "default": "mdi:fan-off"
       }
     },
     "fan": {
@@ -43,8 +49,8 @@
       "drying_status": {
         "default": "mdi:weather-windy",
         "state": {
-          "complete": "mdi:check-circle-outline",
-          "idle": "mdi:pause-circle-outline"
+          "idle": "mdi:pause-circle-outline",
+          "stopped": "mdi:stop-circle-outline"
         }
       },
       "drying_time_remaining": {

@@ -34,5 +34,5 @@
   "requirements": [
     "pyvesync>=3.5.1"
   ],
-  "version": "2026.11.2.2"
+  "version": "2026.11.2.3"
 }
