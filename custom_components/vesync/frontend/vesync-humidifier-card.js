@@ -16,7 +16,7 @@
  * Served by the VeSync Extended integration; no separate install needed.
  */
 
-const CARD_VERSION = "1.3.0";
+const CARD_VERSION = "1.4.0";
 
 // card config key -> [domain, translation_key]
 const SIBLINGS = {
@@ -37,6 +37,8 @@ const SIBLINGS = {
 
 const MODES = [
   { mode: "humidity", label: "Humidity", icon: "mdi:water-percent" },
+  // Not a device mode: Manual with humidity_automation on (see _setMode).
+  { mode: "average", label: "Average", icon: "mdi:home-analytics" },
   { mode: "manual", label: "Manual", icon: "mdi:hand-back-right-outline" },
   { mode: "auto", label: "Auto", icon: "mdi:alpha-a-circle-outline" },
   { mode: "sleep", label: "Sleep", icon: "mdi:weather-night" },
@@ -204,16 +206,16 @@ class VeSyncHumidifierCard extends HTMLElement {
     this._render();
   }
 
-  // With humidity_automation set, the Humidity button doesn't use the
-  // device's own Humidity mode (which only reads its built-in sensor). It puts
-  // the device in Manual and turns the automation on, which sets the mist
-  // level from another sensor. Any other mode turns the automation off.
+  // With humidity_automation set, the card adds an Average button next to the
+  // device's own Humidity mode (which only reads its built-in sensor). Average
+  // puts the device in Manual and turns the automation on, which sets the
+  // mist level from another sensor. Any other mode turns the automation off.
   async _setMode(mode) {
     const h = this._state("humidifier");
     if (!h) return;
     const auto = this._ids.humidity_automation;
-    const deviceMode = auto && mode === "humidity" ? "manual" : mode;
-    if (auto && mode !== "humidity" && this._isOn("humidity_automation")) {
+    const deviceMode = mode === "average" ? "manual" : mode;
+    if (auto && mode !== "average" && this._isOn("humidity_automation")) {
       await this._call("automation", "turn_off", { entity_id: auto });
     }
     const wasOn = h.state === "on";
@@ -223,18 +225,25 @@ class VeSyncHumidifierCard extends HTMLElement {
     if (!wasOn || h.attributes.mode !== deviceMode) {
       await this._call("humidifier", "set_mode", { entity_id: h.entity_id, mode: deviceMode });
     }
-    if (auto && mode === "humidity") {
+    if (auto && mode === "average") {
       await this._call("automation", "turn_on", { entity_id: auto });
       await this._call("automation", "trigger", { entity_id: auto, skip_condition: true });
     }
   }
 
-  // The mode to show. Manual with the humidity automation on shows as Humidity.
+  // The mode to show. Manual with the humidity automation on shows as Average.
   _mode() {
     const raw = this._state("humidifier")?.attributes.mode;
     const virtual =
       !!this._ids?.humidity_automation && raw === "manual" && this._isOn("humidity_automation");
-    return { mode: virtual ? "humidity" : raw, virtual };
+    return { mode: virtual ? "average" : raw, virtual };
+  }
+
+  // The mode buttons: the device's modes, plus Average with the automation.
+  _modeList(available) {
+    return MODES.filter((m) =>
+      m.mode === "average" ? !!this._ids?.humidity_automation : available.includes(m.mode),
+    );
   }
 
   _onClick(ev) {
@@ -498,7 +507,7 @@ class VeSyncHumidifierCard extends HTMLElement {
     }
 
     // Mode row
-    const modeRow = MODES.filter((m) => modes.includes(m.mode))
+    const modeRow = this._modeList(modes)
       .map(
         (m) => `
         <button class="mode ${on && mode === m.mode ? "sel" : ""}" data-action="mode" data-value="${m.mode}" ${unavailable ? "disabled" : ""}>
@@ -587,7 +596,7 @@ class VeSyncHumidifierCard extends HTMLElement {
       const miniValue = drying
         ? `${dryLeft !== undefined ? Math.round(dryLeft) : "--"}<small>min</small>`
         : `${humidity ?? "--"}<small>%</small>`;
-      const compactModes = MODES.filter((m) => modes.includes(m.mode))
+      const compactModes = this._modeList(modes)
         .map(
           (m) => `
           <button class="mode ${on && mode === m.mode ? "sel" : ""}" data-action="mode" data-value="${m.mode}" ${unavailable ? "disabled" : ""} title="${m.label}" aria-label="${m.label}">
@@ -781,7 +790,7 @@ const EDITOR_LABELS = {
   humidity_entity: "Humidity reading (optional, defaults to the humidifier's sensor)",
   target_humidity_entity: "Target humidity helper (optional)",
   humidity_automation:
-    "Humidity mode automation (optional: Humidity then means Manual with this automation on)",
+    "Average mode automation (optional: adds an Average button that runs Manual with this automation on)",
   temperature_entity: "Temperature (optional)",
   ...SIBLING_LABELS,
 };

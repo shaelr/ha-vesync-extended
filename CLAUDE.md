@@ -88,10 +88,12 @@ blue background). The owner's Home view uses it with
 
 `humidity_automation` exists because the device's Humidity mode only reads its
 built-in sensor and the owner wants the house average. With it set, the
-card's Humidity button puts the device in Manual and turns the automation on
+card adds an **Average** button (not a device mode) that puts the device in
+Manual and turns the automation on
 (`automation.adjust_humidifier_based_on_average_humidity` sets the mist level
-from the average against the target, only while in Manual). Any other mode
-turns the automation off. Manual + automation on shows as Humidity.
+from the average against the target, only while in Manual). The Humidity
+button is the device's own mode. Any mode other than Average turns the
+automation off. Manual + automation on shows as Average.
 
 ## Running tests
 
