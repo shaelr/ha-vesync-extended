@@ -7,8 +7,8 @@ domain, so installing it replaces the built-in integration and the owner's
 existing entities, automations and dashboards keep working.
 
 - Based on HA core **2026.11.2**, `pyvesync==3.5.1`.
-- Intended GitHub repo: `shaelr/ha-vesync-extended` (public, so HACS can
-  install it). Not pushed yet.
+- GitHub repo: `shaelr/ha-vesync-extended` (public, so HACS can
+  install it).
 - The owner runs HA OS 2026.11.2. The integration talks to Levoit's cloud
   (`cloud_polling`, every 60 s). The humidifier has no local API, so its LAN
   IP is irrelevant.
@@ -109,9 +109,9 @@ A rejected command raises `HomeAssistantError` and changes nothing.
 
 ## Not done yet
 
-1. **Push to GitHub.** Create `shaelr/ha-vesync-extended` (public, empty),
-   then push `main`. Check the Tests and Validate workflows pass, then install
-   through HACS (custom repository, type Integration) and restart HA.
+1. **Install through HACS.** Pushed to `shaelr/ha-vesync-extended` on
+   2026-11-22; Tests and Validate pass. Add it in HACS as a custom repository
+   (type Integration), download, restart HA.
 2. **Test the experimental commands on the humidifier.** The filter is at 99%,
    so a working Reset filter just shows 100%. Set a 1-hour off timer and
    cancel it. Switch drying level.
