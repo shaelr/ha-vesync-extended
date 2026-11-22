@@ -34,6 +34,9 @@ only get small hooks:
   called in `__init__` and after `update_all_devices()`.
 - `sensor.py`, `number.py`, `select.py`, `button.py`, `switch.py`: one
   `async_add_entities(<x>_entities(devices, coordinator))` line each.
+- `switch.py`: the core Auto Off switch (`auto_off_config`, `autoStopSwitch`)
+  is skipped for the 6000S. The Levoit app has no such setting for it and
+  no command to change it, so the owner asked to hide it.
 - `services.py`: one `async_setup_send_command(hass)` line. The
   `vesync.send_command` developer action (device, method, data) sends any
   bypass V2 command and returns the reply plus the status read right after.

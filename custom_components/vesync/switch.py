@@ -25,6 +25,7 @@ from .const import VS_DEVICES, VS_DISCOVERY
 from .coordinator import VesyncConfigEntry, VeSyncDataCoordinator
 from .entity import VeSyncBaseEntity
 from .extra_entities import switch_entities
+from .superior6000s import is_superior_6000s
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -117,8 +118,12 @@ SENSOR_DESCRIPTIONS: Final[tuple[VeSyncSwitchEntityDescription, ...]] = (
     VeSyncSwitchEntityDescription(
         key="auto_off_config",
         is_on=lambda device: device.state.automatic_stop_config,
+        # The Levoit app has no auto stop setting for the 6000S (owner's request).
         exists_fn=(
-            lambda device: rgetattr(device, "state.automatic_stop_config") is not None
+            lambda device: (
+                rgetattr(device, "state.automatic_stop_config") is not None
+                and not is_superior_6000s(device)
+            )
         ),
         translation_key="auto_off_config",
         entity_category=EntityCategory.CONFIG,
