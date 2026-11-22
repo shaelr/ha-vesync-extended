@@ -48,7 +48,7 @@ DRYING_LEVELS: dict[int, str] = {1: "low", 2: "high"}
 DRYING_LEVELS_REVERSE: dict[str, int] = {v: k for k, v in DRYING_LEVELS.items()}
 
 # The device's own timer button goes from 1 to 12 hours.
-OFF_TIMER_MAX_HOURS = 12
+OFF_TIMER_MAX_MINUTES = 12 * 60
 
 # Which timer API flavour worked for a device, keyed by cid. The 6000S
 # reports its countdown like the LV600S (V2 timers) but shares firmware

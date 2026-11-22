@@ -1136,7 +1136,7 @@
       'disabled_by': None,
       'domain': 'switch',
       'entity_category': <EntityCategory.CONFIG: 'config'>,
-      'entity_id': 'switch.humidifier_6000s_enable_drying_mode_while_power_is_off',
+      'entity_id': 'switch.humidifier_6000s_dry_mode_power_off',
       'has_entity_name': True,
       'hidden_by': None,
       'icon': None,
@@ -1144,12 +1144,12 @@
       'labels': set({
       }),
       'name': None,
-      'object_id_base': 'Enable drying mode while power is off',
+      'object_id_base': 'Dry Mode: Power Off',
       'options': dict({
       }),
       'original_device_class': None,
       'original_icon': None,
-      'original_name': 'Enable drying mode while power is off',
+      'original_name': 'Dry Mode: Power Off',
       'platform': 'vesync',
       'previous_unique_id': None,
       'suggested_object_id': None,
@@ -1171,7 +1171,7 @@
       'disabled_by': None,
       'domain': 'switch',
       'entity_category': <EntityCategory.CONFIG: 'config'>,
-      'entity_id': 'switch.humidifier_6000s_dry_when_out_of_water',
+      'entity_id': 'switch.humidifier_6000s_dry_mode_water_shortage',
       'has_entity_name': True,
       'hidden_by': None,
       'icon': None,
@@ -1179,12 +1179,12 @@
       'labels': set({
       }),
       'name': None,
-      'object_id_base': 'Dry when out of water',
+      'object_id_base': 'Dry Mode: Water Shortage',
       'options': dict({
       }),
       'original_device_class': None,
       'original_icon': None,
-      'original_name': 'Dry when out of water',
+      'original_name': 'Dry Mode: Water Shortage',
       'platform': 'vesync',
       'previous_unique_id': None,
       'suggested_object_id': None,
@@ -1221,26 +1221,26 @@
     'state': 'on',
   })
 # ---
-# name: test_switch_state[Humidifier 6000s][switch.humidifier_6000s_dry_when_out_of_water]
+# name: test_switch_state[Humidifier 6000s][switch.humidifier_6000s_dry_mode_power_off]
   StateSnapshot({
     'attributes': ReadOnlyDict({
-      <EntityStateAttribute.FRIENDLY_NAME: 'friendly_name'>: 'Humidifier 6000s Dry when out of water',
+      <EntityStateAttribute.FRIENDLY_NAME: 'friendly_name'>: 'Humidifier 6000s Dry Mode: Power Off',
     }),
     'context': <ANY>,
-    'entity_id': 'switch.humidifier_6000s_dry_when_out_of_water',
+    'entity_id': 'switch.humidifier_6000s_dry_mode_power_off',
     'last_changed': <ANY>,
     'last_reported': <ANY>,
     'last_updated': <ANY>,
     'state': 'on',
   })
 # ---
-# name: test_switch_state[Humidifier 6000s][switch.humidifier_6000s_enable_drying_mode_while_power_is_off]
+# name: test_switch_state[Humidifier 6000s][switch.humidifier_6000s_dry_mode_water_shortage]
   StateSnapshot({
     'attributes': ReadOnlyDict({
-      <EntityStateAttribute.FRIENDLY_NAME: 'friendly_name'>: 'Humidifier 6000s Enable drying mode while power is off',
+      <EntityStateAttribute.FRIENDLY_NAME: 'friendly_name'>: 'Humidifier 6000s Dry Mode: Water Shortage',
     }),
     'context': <ANY>,
-    'entity_id': 'switch.humidifier_6000s_enable_drying_mode_while_power_is_off',
+    'entity_id': 'switch.humidifier_6000s_dry_mode_water_shortage',
     'last_changed': <ANY>,
     'last_reported': <ANY>,
     'last_updated': <ANY>,

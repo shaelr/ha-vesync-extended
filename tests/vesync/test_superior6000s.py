@@ -98,15 +98,16 @@ async def test_no_run_time_without_field(
     assert hass.states.get("sensor.humidifier_6000s_total_run_time") is None
 
 
-async def test_off_timer_shows_remaining_hours(
+async def test_off_timer_shows_remaining_minutes(
     hass: HomeAssistant,
     config_entry: MockConfigEntry,
     aioclient_mock: AiohttpClientMocker,
 ) -> None:
-    """The timer shows the hours left, rounded up."""
+    """The timer shows the minutes left, rounded up."""
     await _setup(hass, config_entry, aioclient_mock, {"timerRemain": 5000})
 
-    assert hass.states.get(OFF_TIMER).state == "2"
+    assert hass.states.get(OFF_TIMER).state == "84"
+    assert hass.states.get(OFF_TIMER).attributes["unit_of_measurement"] == "min"
     assert float(hass.states.get(OFF_TIMER_REMAINING).state) == pytest.approx(
         83.33, abs=0.01
     )
@@ -125,7 +126,7 @@ async def test_set_off_timer(
     await hass.services.async_call(
         NUMBER_DOMAIN,
         SERVICE_SET_VALUE,
-        {ATTR_ENTITY_ID: OFF_TIMER, ATTR_VALUE: 3},
+        {ATTR_ENTITY_ID: OFF_TIMER, ATTR_VALUE: 90},
         blocking=True,
     )
 
@@ -134,11 +135,11 @@ async def test_set_off_timer(
         "addTimerV2",
         {
             "startAct": [{"type": "powerSwitch", "num": 0, "act": 0}],
-            "total": 10800,
+            "total": 5400,
         },
     ) in sent
-    assert hass.states.get(OFF_TIMER).state == "3"
-    assert float(hass.states.get(OFF_TIMER_REMAINING).state) == 180
+    assert hass.states.get(OFF_TIMER).state == "90"
+    assert float(hass.states.get(OFF_TIMER_REMAINING).state) == 90
 
 
 async def test_cancel_off_timer(
@@ -185,7 +186,7 @@ async def test_off_timer_rejected(
         await hass.services.async_call(
             NUMBER_DOMAIN,
             SERVICE_SET_VALUE,
-            {ATTR_ENTITY_ID: OFF_TIMER, ATTR_VALUE: 2},
+            {ATTR_ENTITY_ID: OFF_TIMER, ATTR_VALUE: 30},
             blocking=True,
         )
     assert hass.states.get(OFF_TIMER).state == "0"
@@ -459,7 +460,7 @@ async def test_send_command_unknown_device(
         )
 
 
-WATER_SHORTAGE_DRYING = "switch.humidifier_6000s_dry_when_out_of_water"
+WATER_SHORTAGE_DRYING = "switch.humidifier_6000s_dry_mode_water_shortage"
 
 
 async def _switch(hass: HomeAssistant, service: str) -> None:

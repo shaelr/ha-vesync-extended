@@ -36,7 +36,7 @@ from .superior6000s import (
     DRYING_STATE_DRYING,
     DRYING_STATE_STOPPED,
     DRYING_STATES,
-    OFF_TIMER_MAX_HOURS,
+    OFF_TIMER_MAX_MINUTES,
     async_clear_off_timer,
     async_reset_filter,
     async_set_off_timer,
@@ -217,15 +217,18 @@ class VeSyncExtraSensor(VeSyncExtraEntity, SensorEntity):
 
 
 class VeSyncOffTimerNumber(VeSyncExtraEntity, NumberEntity):
-    """Off timer in hours. Shows the time left, rounded up. 0 cancels it."""
+    """Off timer in minutes (90 = 1 h 30 min). Shows the time left, rounded up.
+
+    0 cancels it.
+    """
 
     _attr_translation_key = "off_timer"
     _attr_device_class = NumberDeviceClass.DURATION
-    _attr_native_unit_of_measurement = UnitOfTime.HOURS
+    _attr_native_unit_of_measurement = UnitOfTime.MINUTES
     _attr_native_min_value = 0
-    _attr_native_max_value = OFF_TIMER_MAX_HOURS
+    _attr_native_max_value = OFF_TIMER_MAX_MINUTES
     _attr_native_step = 1
-    _attr_mode = NumberMode.SLIDER
+    _attr_mode = NumberMode.BOX
 
     def __init__(
         self, device: VeSyncBaseDevice, coordinator: VeSyncDataCoordinator
@@ -236,22 +239,22 @@ class VeSyncOffTimerNumber(VeSyncExtraEntity, NumberEntity):
     @property
     @override
     def native_value(self) -> float | None:
-        """Return the hours left on the timer, rounded up."""
+        """Return the minutes left on the timer, rounded up."""
         remaining = _int(self.status.get("timerRemain"))
         if remaining is None:
             return None
-        return math.ceil(remaining / 3600)
+        return math.ceil(remaining / 60)
 
     @override
     async def async_set_native_value(self, value: float) -> None:
         """Start the timer, or cancel it when set to 0."""
-        hours = int(value)
-        if hours <= 0:
+        minutes = int(value)
+        if minutes <= 0:
             if not await async_clear_off_timer(self.device):
                 raise HomeAssistantError("The humidifier did not cancel the timer")
             self._optimistic(timerRemain=0)
             return
-        seconds = hours * 3600
+        seconds = minutes * 60
         if not await async_set_off_timer(self.device, seconds):
             raise HomeAssistantError(
                 "The humidifier rejected the timer. Enable debug logging for "

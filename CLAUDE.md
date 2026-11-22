@@ -50,8 +50,10 @@ only get small hooks:
   `dryingState == 1`, choosing it starts drying, and choosing a real mode
   while drying records the cycle as stopped.
 - `strings.json`, `translations/en.json`, `icons.json`, `manifest.json`.
-  The `child_lock` switch is named "Display lock", as in the Levoit app
-  (owner's request).
+  Names follow the Levoit app (owner's request): `child_lock` is "Display
+  lock", `drying_mode_power_off` is "Dry Mode: Power Off" and
+  `water_shortage_drying` is "Dry Mode: Water Shortage". The Off timer is
+  a number in minutes (0–720, typed in), so 90 = 1 h 30 min as in the app.
 
 Keep it that way so a future HA release can be pulled in by re-copying core's
 `homeassistant/components/vesync` and re-applying the hooks.
@@ -171,11 +173,6 @@ A rejected command raises `HomeAssistantError` and changes nothing.
      the Levoit account ID and login token.
 4. **Not started:**
    - Humidity calibration (see above for the command names).
-   - Off timer in hours and minutes, like the app's picker. Deferred by the
-     owner until we build their humidifier dashboard card. Plan: a
-     `vesync.set_off_timer` action with a duration (h/min) field, run from a
-     dashboard button that opens a popup with the picker. Keep the Off timer
-     number for showing the time left and cancelling.
 
 ## Owner's HA setup (context)
 

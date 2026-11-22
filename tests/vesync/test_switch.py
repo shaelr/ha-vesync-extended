@@ -157,13 +157,13 @@ async def test_turn_on_off_display_raises_error(
         # drying_mode_power_off switch for humidifier with drying mode
         (
             "Humidifier 6000s",
-            "switch.humidifier_6000s_enable_drying_mode_while_power_is_off",
+            "switch.humidifier_6000s_dry_mode_power_off",
             SERVICE_TURN_ON,
             "pyvesync.devices.vesynchumidifier.VeSyncSuperior6000S.toggle_drying_mode",
         ),
         (
             "Humidifier 6000s",
-            "switch.humidifier_6000s_enable_drying_mode_while_power_is_off",
+            "switch.humidifier_6000s_dry_mode_power_off",
             SERVICE_TURN_OFF,
             "pyvesync.devices.vesynchumidifier.VeSyncSuperior6000S.toggle_drying_mode",
         ),
