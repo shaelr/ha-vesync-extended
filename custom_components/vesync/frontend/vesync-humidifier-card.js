@@ -5,6 +5,7 @@
  *   entity: humidifier.humidifier
  *   target_humidity_entity: input_number.target_humidity   # optional
  *   name: Humidifier                                       # optional
+ *   humidity_entity: sensor.average_humidity               # optional, ring reading
  *
  * The other entities (mist level, filter, timer, drying ...) are found on the
  * same device by their translation key, so renamed entity ids keep working.
@@ -13,7 +14,7 @@
  * Served by the VeSync Extended integration; no separate install needed.
  */
 
-const CARD_VERSION = "1.0.0";
+const CARD_VERSION = "1.1.0";
 
 // card config key -> [domain, translation_key]
 const SIBLINGS = {
@@ -56,6 +57,11 @@ const fmtMinutes = (min) => {
 };
 
 class VeSyncHumidifierCard extends HTMLElement {
+  static async getConfigElement() {
+    await ensureHaForm();
+    return document.createElement("vesync-humidifier-card-editor");
+  }
+
   static getStubConfig(hass) {
     const entity = Object.keys(hass.states).find((e) =>
       e.startsWith("humidifier."),
@@ -357,9 +363,10 @@ class VeSyncHumidifierCard extends HTMLElement {
     const modes = h.attributes.available_modes || [];
     const name = this._config.name || h.attributes.friendly_name || "Humidifier";
 
-    const humidity = this._config.humidity_entity
+    const rawHumidity = this._config.humidity_entity
       ? this._num("humidity_entity")
       : h.attributes.current_humidity;
+    const humidity = rawHumidity == null ? undefined : Math.round(rawHumidity);
     const temp = this._state("temperature_entity");
     const filter = this._num("filter_entity");
     const lowWater = this._isOn("low_water_entity");
@@ -636,14 +643,117 @@ class VeSyncHumidifierCard extends HTMLElement {
   }
 }
 
+// ------------------------------------------------------------------ editor
+
+const SIBLING_LABELS = {
+  mist_level_entity: "Mist level",
+  filter_entity: "Filter life",
+  reset_filter_entity: "Reset filter button",
+  low_water_entity: "Out of water",
+  tank_lifted_entity: "Water tank lifted",
+  display_entity: "Display",
+  display_lock_entity: "Display lock",
+  drying_level_entity: "Drying level",
+  drying_remaining_entity: "Drying time remaining",
+  off_timer_entity: "Off timer",
+  off_timer_remaining_entity: "Off timer remaining",
+  dry_power_off_entity: "Dry Mode: Power Off",
+  dry_water_shortage_entity: "Dry Mode: Water Shortage",
+};
+
+const EDITOR_LABELS = {
+  entity: "Humidifier",
+  name: "Name (optional)",
+  humidity_entity: "Humidity reading (optional, defaults to the humidifier's sensor)",
+  target_humidity_entity: "Target humidity helper (optional)",
+  temperature_entity: "Temperature (optional)",
+  ...SIBLING_LABELS,
+};
+
+const EDITOR_SCHEMA = [
+  { name: "entity", required: true, selector: { entity: { domain: "humidifier" } } },
+  { name: "name", selector: { text: {} } },
+  {
+    name: "humidity_entity",
+    selector: { entity: { domain: "sensor", device_class: "humidity" } },
+  },
+  {
+    name: "target_humidity_entity",
+    selector: { entity: { domain: ["input_number", "number"] } },
+  },
+  {
+    name: "temperature_entity",
+    selector: { entity: { domain: "sensor", device_class: "temperature" } },
+  },
+  {
+    name: "",
+    type: "expandable",
+    title: "Device entities (found automatically)",
+    schema: Object.entries(SIBLINGS).map(([key, [domain]]) => ({
+      name: key,
+      selector: { entity: { domain } },
+    })),
+  },
+];
+
+// ha-form is loaded lazily by the frontend. Creating a built-in card's
+// editor makes sure it is defined before our editor uses it.
+async function ensureHaForm() {
+  if (customElements.get("ha-form")) return;
+  try {
+    const helpers = await window.loadCardHelpers?.();
+    const card = await helpers?.createCardElement({ type: "entities", entities: [] });
+    await card?.constructor?.getConfigElement?.();
+  } catch (_err) {
+    // The editor still renders once ha-form appears.
+  }
+}
+
+class VeSyncHumidifierCardEditor extends HTMLElement {
+  setConfig(config) {
+    this._config = { ...config };
+    this._update();
+  }
+
+  set hass(hass) {
+    this._hass = hass;
+    this._update();
+  }
+
+  _update() {
+    if (!this._hass || !this._config) return;
+    if (!this._form) {
+      this._form = document.createElement("ha-form");
+      this._form.computeLabel = (s) => EDITOR_LABELS[s.name] ?? s.title ?? s.name;
+      this._form.addEventListener("value-changed", (ev) => {
+        const config = { type: this._config.type, ...ev.detail.value };
+        for (const [k, v] of Object.entries(config)) {
+          if (v === "" || v == null) delete config[k];
+        }
+        this._config = config;
+        this.dispatchEvent(
+          new CustomEvent("config-changed", {
+            detail: { config },
+            bubbles: true,
+            composed: true,
+          }),
+        );
+      });
+      this.appendChild(this._form);
+    }
+    this._form.hass = this._hass;
+    this._form.schema = EDITOR_SCHEMA;
+    this._form.data = this._config;
+  }
+}
+
 const STYLE = `
   :host {
-    --vs-bg-a: #13284f;
-    --vs-bg-b: #0a1631;
-    --vs-surface: rgba(255, 255, 255, 0.07);
-    --vs-surface-hi: rgba(255, 255, 255, 0.13);
-    --vs-text: #f3f6fc;
-    --vs-dim: rgba(225, 233, 248, 0.62);
+    --vs-text: var(--primary-text-color, #212121);
+    --vs-dim: var(--secondary-text-color, #727272);
+    --vs-surface: color-mix(in srgb, var(--vs-text) 6%, transparent);
+    --vs-surface-hi: color-mix(in srgb, var(--vs-text) 11%, transparent);
+    --vs-line: color-mix(in srgb, var(--vs-text) 10%, transparent);
     --vs-accent: #2fb5ff;
     --vs-ring-a: #2a7dff;
     --vs-ring-b: #47e0ff;
@@ -663,8 +773,7 @@ const STYLE = `
     overflow: hidden;
     padding: 18px 16px 16px;
     color: var(--vs-text);
-    background: radial-gradient(120% 70% at 50% 0%, var(--vs-bg-a), var(--vs-bg-b));
-    border: 0;
+    background: var(--ha-card-background, var(--card-background-color, #fff));
     border-radius: var(--ha-card-border-radius, 24px);
     font-family: var(--ha-font-family-body, Roboto, system-ui, sans-serif);
   }
@@ -680,7 +789,7 @@ const STYLE = `
     background: var(--vs-surface); color: var(--vs-dim);
     transition: background 0.2s, color 0.2s;
   }
-  .power.on { background: var(--vs-accent); color: #fff; box-shadow: 0 0 18px rgba(47, 181, 255, 0.45); }
+  .power.on { background: var(--vs-accent); color: #fff; }
 
   .chips { display: flex; gap: 8px; margin-top: 12px; min-height: 30px; }
   .chip {
@@ -693,10 +802,10 @@ const STYLE = `
   .ring-wrap { position: relative; width: min(240px, 72%); margin: 0 auto; cursor: pointer; }
   .ring { display: block; width: 100%; }
   .ring circle { fill: none; stroke-width: 14; stroke-linecap: round; }
-  .ring .track { stroke: rgba(255, 255, 255, 0.08); }
-  .ring .value { stroke: url(#vs-grad); transition: stroke-dasharray 0.6s ease; filter: drop-shadow(0 0 6px rgba(71, 224, 255, 0.35)); }
-  .is-off .ring .value { stroke: rgba(255, 255, 255, 0.22); filter: none; }
-  .ring .tick { stroke: #fff; stroke-width: 3; stroke-linecap: round; }
+  .ring .track { stroke: var(--vs-line); }
+  .ring .value { stroke: url(#vs-grad); transition: stroke-dasharray 0.6s ease; }
+  .is-off .ring .value { stroke: var(--vs-surface-hi); }
+  .ring .tick { stroke: var(--vs-text); stroke-width: 3; stroke-linecap: round; }
   .centre {
     position: absolute; inset: 0;
     display: flex; flex-direction: column; align-items: center; justify-content: center;
@@ -711,7 +820,7 @@ const STYLE = `
   .alert {
     display: flex; align-items: center; gap: 10px;
     margin: 4px 0 10px; padding: 10px 14px; border-radius: 14px;
-    background: rgba(255, 107, 94, 0.16); color: #ffb3ab; font-weight: 500;
+    background: rgba(255, 107, 94, 0.16); color: var(--vs-warn); font-weight: 500;
     animation: vs-pulse 3s ease-in-out infinite;
   }
   @keyframes vs-pulse { 50% { background: rgba(255, 107, 94, 0.28); } }
@@ -722,7 +831,7 @@ const STYLE = `
   .panel-head ha-icon { --mdc-icon-size: 18px; color: var(--vs-accent); }
   .panel-head b { margin-left: auto; font-size: 16px; color: var(--vs-text); }
   .bars { display: flex; align-items: flex-end; gap: 4px; height: 46px; margin-top: 8px; }
-  .bar { flex: 1; height: var(--h); border-radius: 4px; background: rgba(255, 255, 255, 0.12); transition: background 0.2s; }
+  .bar { flex: 1; height: var(--h); border-radius: 4px; background: var(--vs-surface-hi); transition: background 0.2s; }
   .bar.lit { background: linear-gradient(to top, var(--vs-ring-a), var(--vs-ring-b)); }
   .stepper { display: flex; align-items: center; justify-content: space-between; margin-top: 6px; }
   .round { width: 38px; height: 38px; border-radius: 50%; display: grid; place-items: center; background: var(--vs-surface-hi); }
@@ -740,9 +849,9 @@ const STYLE = `
     background: var(--vs-surface); color: var(--vs-dim); transition: background 0.2s, color 0.2s;
   }
   .mode-label { font-size: 12px; color: var(--vs-dim); }
-  .mode.sel .mode-icon { background: var(--vs-accent); color: #fff; box-shadow: 0 0 14px rgba(47, 181, 255, 0.4); }
+  .mode.sel .mode-icon { background: var(--vs-accent); color: #fff; }
   .mode.sel .mode-label { color: var(--vs-text); font-weight: 500; }
-  .mode[data-value="dry"].sel .mode-icon { background: var(--vs-dry); color: #2b1600; box-shadow: 0 0 14px rgba(255, 179, 71, 0.4); }
+  .mode[data-value="dry"].sel .mode-icon { background: var(--vs-dry); color: #2b1600; }
 
   .tiles { display: grid; gap: 8px; grid-template-columns: repeat(4, minmax(0, 1fr)); }
   .row {
@@ -765,17 +874,17 @@ const STYLE = `
 
   .error {
     display: flex; gap: 8px; align-items: center; margin-top: 12px; padding: 10px 12px;
-    border-radius: 12px; background: rgba(255, 107, 94, 0.16); color: #ffb3ab; font-size: 13px; cursor: pointer;
+    border-radius: 12px; background: rgba(255, 107, 94, 0.16); color: var(--vs-warn); font-size: 13px; cursor: pointer;
   }
 
   .scrim {
     position: absolute; inset: 0; z-index: 2;
     display: flex; align-items: flex-end; justify-content: center;
-    background: rgba(3, 8, 20, 0.6); backdrop-filter: blur(3px);
+    background: rgba(0, 0, 0, 0.35); backdrop-filter: blur(2px);
   }
   .dialog {
     width: 100%; padding: 18px 18px 16px; border-radius: 22px 22px 0 0;
-    background: #182d55; box-shadow: 0 -8px 30px rgba(0, 0, 0, 0.4);
+    background: var(--ha-card-background, var(--card-background-color, #fff)); box-shadow: 0 -8px 30px rgba(0, 0, 0, 0.25);
     animation: vs-up 0.22s ease-out;
   }
   @keyframes vs-up { from { transform: translateY(30px); opacity: 0; } }
@@ -784,7 +893,7 @@ const STYLE = `
   .hint { margin: 0 0 14px; font-size: 13px; color: var(--vs-dim); }
   .filter-big { font-size: 48px; font-weight: 300; margin: 6px 0; }
   .filter-big span { font-size: 20px; color: var(--vs-dim); }
-  .filter-bar { height: 8px; border-radius: 4px; background: rgba(255, 255, 255, 0.1); overflow: hidden; margin-bottom: 12px; }
+  .filter-bar { height: 8px; border-radius: 4px; background: var(--vs-surface-hi); overflow: hidden; margin-bottom: 12px; }
   .filter-bar div { height: 100%; background: linear-gradient(to right, var(--vs-ring-a), var(--vs-ring-b)); }
   .pickers { display: flex; justify-content: center; gap: 16px; margin: 6px 0 18px; }
   .pickers label { display: flex; align-items: center; gap: 6px; font-size: 15px; color: var(--vs-dim); }
@@ -793,7 +902,7 @@ const STYLE = `
     font: inherit; font-size: 32px; font-weight: 300; text-align: center; color: var(--vs-text);
     background: var(--vs-surface-hi); border: 0; border-radius: 14px; padding: 8px 14px; min-width: 84px; cursor: pointer;
   }
-  .pickers select option { color: #000; }
+  .pickers select option { color: var(--primary-text-color); background: var(--card-background-color); }
   .dialog-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 4px; }
   .dialog-actions .primary { padding: 10px 20px; border-radius: 999px; background: var(--vs-accent); color: #fff; font-weight: 600; }
   .dialog-actions .text { padding: 10px 14px; border-radius: 999px; color: var(--vs-dim); margin-right: auto; }
@@ -804,11 +913,15 @@ const STYLE = `
   }
   .setting b { display: block; font-weight: 500; font-size: 14px; }
   .setting small { display: block; color: var(--vs-dim); font-size: 12px; margin-top: 2px; }
-  .switch { flex: none; width: 44px; height: 26px; border-radius: 13px; background: rgba(255, 255, 255, 0.18); position: relative; transition: background 0.2s; }
+  .switch { flex: none; width: 44px; height: 26px; border-radius: 13px; background: var(--vs-surface-hi); position: relative; transition: background 0.2s; }
   .switch span { position: absolute; top: 3px; left: 3px; width: 20px; height: 20px; border-radius: 50%; background: #fff; transition: transform 0.2s; }
   .switch.on { background: var(--vs-accent); }
   .switch.on span { transform: translateX(18px); }
 `;
+
+if (!customElements.get("vesync-humidifier-card-editor")) {
+  customElements.define("vesync-humidifier-card-editor", VeSyncHumidifierCardEditor);
+}
 
 if (!customElements.get("vesync-humidifier-card")) {
   customElements.define("vesync-humidifier-card", VeSyncHumidifierCard);
