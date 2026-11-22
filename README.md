@@ -26,9 +26,9 @@ integration ignores.
 
 ### Other changes
 
-- The humidifier's **Manual** mode shows as "Manual" instead of "Normal".
-  Only the label changes: the mode's value is still `normal`, so anything that
-  sets it keeps working.
+- The humidifier's **Manual** mode is called `manual` instead of `normal`,
+  matching the Levoit app. Automations or scripts that set a VeSync humidifier
+  to `normal` need changing to `manual`.
 - Drying readings come from Levoit's cloud, which can lag the app by a few
   minutes.
 

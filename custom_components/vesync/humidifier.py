@@ -7,7 +7,6 @@ from pyvesync.base_devices.humidifier_base import VeSyncHumidifier
 
 from homeassistant.components.humidifier import (
     MODE_AUTO,
-    MODE_NORMAL,
     MODE_SLEEP,
     HumidifierEntity,
     HumidifierEntityFeature,
@@ -35,7 +34,7 @@ _LOGGER = logging.getLogger(__name__)
 VS_TO_HA_MODE_MAP = {
     VS_HUMIDIFIER_MODE_AUTO: MODE_AUTO,
     VS_HUMIDIFIER_MODE_HUMIDITY: VS_HUMIDIFIER_MODE_HUMIDITY,
-    VS_HUMIDIFIER_MODE_MANUAL: MODE_NORMAL,
+    VS_HUMIDIFIER_MODE_MANUAL: VS_HUMIDIFIER_MODE_MANUAL,
     VS_HUMIDIFIER_MODE_SLEEP: MODE_SLEEP,
 }
 

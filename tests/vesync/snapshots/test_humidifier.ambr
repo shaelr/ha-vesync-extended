@@ -401,7 +401,7 @@
       'capabilities': dict({
         <HumidifierEntityCapabilityAttribute.AVAILABLE_MODES: 'available_modes'>: list([
           'auto',
-          'normal',
+          'manual',
         ]),
         <HumidifierEntityCapabilityAttribute.MAX_HUMIDITY: 'max_humidity'>: 80,
         <HumidifierEntityCapabilityAttribute.MIN_HUMIDITY: 'min_humidity'>: 30,
@@ -442,14 +442,14 @@
     'attributes': ReadOnlyDict({
       <HumidifierEntityCapabilityAttribute.AVAILABLE_MODES: 'available_modes'>: list([
         'auto',
-        'normal',
+        'manual',
       ]),
       <HumidifierEntityStateAttribute.CURRENT_HUMIDITY: 'current_humidity'>: 35,
       <EntityStateAttribute.FRIENDLY_NAME: 'friendly_name'>: 'Humidifier 200s',
       <HumidifierEntityStateAttribute.HUMIDITY: 'humidity'>: 40,
       <HumidifierEntityCapabilityAttribute.MAX_HUMIDITY: 'max_humidity'>: 80,
       <HumidifierEntityCapabilityAttribute.MIN_HUMIDITY: 'min_humidity'>: 30,
-      <HumidifierEntityStateAttribute.MODE: 'mode'>: 'normal',
+      <HumidifierEntityStateAttribute.MODE: 'mode'>: 'manual',
       <EntityStateAttribute.SUPPORTED_FEATURES: 'supported_features'>: <HumidifierEntityFeature: 1>,
     }),
     'context': <ANY>,
@@ -503,7 +503,7 @@
         <HumidifierEntityCapabilityAttribute.AVAILABLE_MODES: 'available_modes'>: list([
           'auto',
           'humidity',
-          'normal',
+          'manual',
           'sleep',
         ]),
         <HumidifierEntityCapabilityAttribute.MAX_HUMIDITY: 'max_humidity'>: 80,
@@ -546,7 +546,7 @@
       <HumidifierEntityCapabilityAttribute.AVAILABLE_MODES: 'available_modes'>: list([
         'auto',
         'humidity',
-        'normal',
+        'manual',
         'sleep',
       ]),
       <HumidifierEntityStateAttribute.CURRENT_HUMIDITY: 'current_humidity'>: 36,
@@ -607,7 +607,7 @@
       'capabilities': dict({
         <HumidifierEntityCapabilityAttribute.AVAILABLE_MODES: 'available_modes'>: list([
           'auto',
-          'normal',
+          'manual',
           'sleep',
         ]),
         <HumidifierEntityCapabilityAttribute.MAX_HUMIDITY: 'max_humidity'>: 80,
@@ -649,7 +649,7 @@
     'attributes': ReadOnlyDict({
       <HumidifierEntityCapabilityAttribute.AVAILABLE_MODES: 'available_modes'>: list([
         'auto',
-        'normal',
+        'manual',
         'sleep',
       ]),
       <HumidifierEntityStateAttribute.CURRENT_HUMIDITY: 'current_humidity'>: 35,
@@ -657,7 +657,7 @@
       <HumidifierEntityStateAttribute.HUMIDITY: 'humidity'>: 40,
       <HumidifierEntityCapabilityAttribute.MAX_HUMIDITY: 'max_humidity'>: 80,
       <HumidifierEntityCapabilityAttribute.MIN_HUMIDITY: 'min_humidity'>: 30,
-      <HumidifierEntityStateAttribute.MODE: 'mode'>: 'normal',
+      <HumidifierEntityStateAttribute.MODE: 'mode'>: 'manual',
       <EntityStateAttribute.SUPPORTED_FEATURES: 'supported_features'>: <HumidifierEntityFeature: 1>,
     }),
     'context': <ANY>,
