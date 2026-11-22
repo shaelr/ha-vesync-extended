@@ -80,11 +80,18 @@ manifest version when the card changes. It finds the other entities on the
 humidifier's device by translation key. Config: `entity` (required),
 `target_humidity_entity`, `humidity_entity` (the ring reading), `name`,
 `layout` (`full`, `compact`, or `expandable`: compact with a chevron to open
-the full card; the open state isn't saved), and
+the full card; the open state isn't saved), `humidity_automation`, and
 overrides such as `filter_entity`. It has a visual editor (`ha-form`). It uses
 the theme's card background and text colours (the owner didn't want the app's
 blue background). The owner's Home view uses it with
 `input_number.target_humidity` and `sensor.average_humidity`.
+
+`humidity_automation` exists because the device's Humidity mode only reads its
+built-in sensor and the owner wants the house average. With it set, the
+card's Humidity button puts the device in Manual and turns the automation on
+(`automation.adjust_humidifier_based_on_average_humidity` sets the mist level
+from the average against the target, only while in Manual). Any other mode
+turns the automation off. Manual + automation on shows as Humidity.
 
 ## Running tests
 

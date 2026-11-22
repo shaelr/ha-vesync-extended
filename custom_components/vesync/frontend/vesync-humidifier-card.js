@@ -7,6 +7,7 @@
  *   name: Humidifier                                       # optional
  *   humidity_entity: sensor.average_humidity               # optional, ring reading
  *   layout: full | compact | expandable                    # optional, default full
+ *   humidity_automation: automation.x                      # optional, see _mode()
  *
  * The other entities (mist level, filter, timer, drying ...) are found on the
  * same device by their translation key, so renamed entity ids keep working.
@@ -15,7 +16,7 @@
  * Served by the VeSync Extended integration; no separate install needed.
  */
 
-const CARD_VERSION = "1.2.0";
+const CARD_VERSION = "1.3.0";
 
 // card config key -> [domain, translation_key]
 const SIBLINGS = {
@@ -159,6 +160,7 @@ class VeSyncHumidifierCard extends HTMLElement {
       )?.entity_id;
     ids.humidity_entity = cfg.humidity_entity;
     ids.target_humidity_entity = cfg.target_humidity_entity;
+    ids.humidity_automation = cfg.humidity_automation;
     return ids;
   }
 
@@ -202,16 +204,37 @@ class VeSyncHumidifierCard extends HTMLElement {
     this._render();
   }
 
-  _setMode(mode) {
+  // With humidity_automation set, the Humidity button doesn't use the
+  // device's own Humidity mode (which only reads its built-in sensor). It puts
+  // the device in Manual and turns the automation on, which sets the mist
+  // level from another sensor. Any other mode turns the automation off.
+  async _setMode(mode) {
     const h = this._state("humidifier");
     if (!h) return;
-    if (h.state !== "on") {
-      this._call("humidifier", "turn_on", { entity_id: h.entity_id }).then(() =>
-        this._call("humidifier", "set_mode", { entity_id: h.entity_id, mode }),
-      );
-      return;
+    const auto = this._ids.humidity_automation;
+    const deviceMode = auto && mode === "humidity" ? "manual" : mode;
+    if (auto && mode !== "humidity" && this._isOn("humidity_automation")) {
+      await this._call("automation", "turn_off", { entity_id: auto });
     }
-    this._call("humidifier", "set_mode", { entity_id: h.entity_id, mode });
+    const wasOn = h.state === "on";
+    if (!wasOn) {
+      await this._call("humidifier", "turn_on", { entity_id: h.entity_id });
+    }
+    if (!wasOn || h.attributes.mode !== deviceMode) {
+      await this._call("humidifier", "set_mode", { entity_id: h.entity_id, mode: deviceMode });
+    }
+    if (auto && mode === "humidity") {
+      await this._call("automation", "turn_on", { entity_id: auto });
+      await this._call("automation", "trigger", { entity_id: auto, skip_condition: true });
+    }
+  }
+
+  // The mode to show. Manual with the humidity automation on shows as Humidity.
+  _mode() {
+    const raw = this._state("humidifier")?.attributes.mode;
+    const virtual =
+      !!this._ids?.humidity_automation && raw === "manual" && this._isOn("humidity_automation");
+    return { mode: virtual ? "humidity" : raw, virtual };
   }
 
   _onClick(ev) {
@@ -326,9 +349,9 @@ class VeSyncHumidifierCard extends HTMLElement {
   // own target (used by the device in Humidity and Auto mode).
   _target() {
     const h = this._state("humidifier");
-    const mode = h?.attributes.mode;
+    const { mode, virtual } = this._mode();
     const helper = this._state("target_humidity_entity");
-    if (helper && !(mode === "humidity" || mode === "auto")) {
+    if (helper && (virtual || !(mode === "humidity" || mode === "auto"))) {
       const a = helper.attributes;
       const value = parseFloat(helper.state);
       if (!Number.isFinite(value)) return undefined;
@@ -369,7 +392,7 @@ class VeSyncHumidifierCard extends HTMLElement {
 
     const on = h.state === "on";
     const unavailable = h.state === "unavailable";
-    const mode = h.attributes.mode;
+    const { mode } = this._mode();
     const drying = mode === "dry";
     const modes = h.attributes.available_modes || [];
     const name = this._config.name || h.attributes.friendly_name || "Humidifier";
@@ -757,6 +780,8 @@ const EDITOR_LABELS = {
   layout: "Layout",
   humidity_entity: "Humidity reading (optional, defaults to the humidifier's sensor)",
   target_humidity_entity: "Target humidity helper (optional)",
+  humidity_automation:
+    "Humidity mode automation (optional: Humidity then means Manual with this automation on)",
   temperature_entity: "Temperature (optional)",
   ...SIBLING_LABELS,
 };
@@ -780,6 +805,10 @@ const EDITOR_SCHEMA = [
   {
     name: "humidity_entity",
     selector: { entity: { domain: "sensor", device_class: "humidity" } },
+  },
+  {
+    name: "humidity_automation",
+    selector: { entity: { domain: "automation" } },
   },
   {
     name: "target_humidity_entity",
