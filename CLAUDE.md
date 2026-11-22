@@ -47,6 +47,8 @@ only get small hooks:
   `dryingState == 1`, choosing it starts drying, and choosing a real mode
   while drying records the cycle as stopped.
 - `strings.json`, `translations/en.json`, `icons.json`, `manifest.json`.
+  The `child_lock` switch is named "Display lock", as in the Levoit app
+  (owner's request).
 
 Keep it that way so a future HA release can be pulled in by re-copying core's
 `homeassistant/components/vesync` and re-applying the hooks.

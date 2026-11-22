@@ -165,7 +165,7 @@
       'disabled_by': None,
       'domain': 'switch',
       'entity_category': <EntityCategory.CONFIG: 'config'>,
-      'entity_id': 'switch.air_purifier_200s_child_lock',
+      'entity_id': 'switch.air_purifier_200s_display_lock',
       'has_entity_name': True,
       'hidden_by': None,
       'icon': None,
@@ -173,12 +173,12 @@
       'labels': set({
       }),
       'name': None,
-      'object_id_base': 'Child lock',
+      'object_id_base': 'Display lock',
       'options': dict({
       }),
       'original_device_class': None,
       'original_icon': None,
-      'original_name': 'Child lock',
+      'original_name': 'Display lock',
       'platform': 'vesync',
       'previous_unique_id': None,
       'suggested_object_id': None,
@@ -188,19 +188,6 @@
       'unit_of_measurement': None,
     }),
   ])
-# ---
-# name: test_switch_state[Air Purifier 200s][switch.air_purifier_200s_child_lock]
-  StateSnapshot({
-    'attributes': ReadOnlyDict({
-      <EntityStateAttribute.FRIENDLY_NAME: 'friendly_name'>: 'Air Purifier 200s Child lock',
-    }),
-    'context': <ANY>,
-    'entity_id': 'switch.air_purifier_200s_child_lock',
-    'last_changed': <ANY>,
-    'last_reported': <ANY>,
-    'last_updated': <ANY>,
-    'state': 'off',
-  })
 # ---
 # name: test_switch_state[Air Purifier 200s][switch.air_purifier_200s_display]
   StateSnapshot({
@@ -213,6 +200,19 @@
     'last_reported': <ANY>,
     'last_updated': <ANY>,
     'state': 'on',
+  })
+# ---
+# name: test_switch_state[Air Purifier 200s][switch.air_purifier_200s_display_lock]
+  StateSnapshot({
+    'attributes': ReadOnlyDict({
+      <EntityStateAttribute.FRIENDLY_NAME: 'friendly_name'>: 'Air Purifier 200s Display lock',
+    }),
+    'context': <ANY>,
+    'entity_id': 'switch.air_purifier_200s_display_lock',
+    'last_changed': <ANY>,
+    'last_reported': <ANY>,
+    'last_updated': <ANY>,
+    'state': 'off',
   })
 # ---
 # name: test_switch_state[Air Purifier 400s][devices]
@@ -297,7 +297,7 @@
       'disabled_by': None,
       'domain': 'switch',
       'entity_category': <EntityCategory.CONFIG: 'config'>,
-      'entity_id': 'switch.air_purifier_400s_child_lock',
+      'entity_id': 'switch.air_purifier_400s_display_lock',
       'has_entity_name': True,
       'hidden_by': None,
       'icon': None,
@@ -305,12 +305,12 @@
       'labels': set({
       }),
       'name': None,
-      'object_id_base': 'Child lock',
+      'object_id_base': 'Display lock',
       'options': dict({
       }),
       'original_device_class': None,
       'original_icon': None,
-      'original_name': 'Child lock',
+      'original_name': 'Display lock',
       'platform': 'vesync',
       'previous_unique_id': None,
       'suggested_object_id': None,
@@ -320,19 +320,6 @@
       'unit_of_measurement': None,
     }),
   ])
-# ---
-# name: test_switch_state[Air Purifier 400s][switch.air_purifier_400s_child_lock]
-  StateSnapshot({
-    'attributes': ReadOnlyDict({
-      <EntityStateAttribute.FRIENDLY_NAME: 'friendly_name'>: 'Air Purifier 400s Child lock',
-    }),
-    'context': <ANY>,
-    'entity_id': 'switch.air_purifier_400s_child_lock',
-    'last_changed': <ANY>,
-    'last_reported': <ANY>,
-    'last_updated': <ANY>,
-    'state': 'off',
-  })
 # ---
 # name: test_switch_state[Air Purifier 400s][switch.air_purifier_400s_display]
   StateSnapshot({
@@ -345,6 +332,19 @@
     'last_reported': <ANY>,
     'last_updated': <ANY>,
     'state': 'on',
+  })
+# ---
+# name: test_switch_state[Air Purifier 400s][switch.air_purifier_400s_display_lock]
+  StateSnapshot({
+    'attributes': ReadOnlyDict({
+      <EntityStateAttribute.FRIENDLY_NAME: 'friendly_name'>: 'Air Purifier 400s Display lock',
+    }),
+    'context': <ANY>,
+    'entity_id': 'switch.air_purifier_400s_display_lock',
+    'last_changed': <ANY>,
+    'last_reported': <ANY>,
+    'last_updated': <ANY>,
+    'state': 'off',
   })
 # ---
 # name: test_switch_state[Air Purifier 600s][devices]
@@ -429,7 +429,7 @@
       'disabled_by': None,
       'domain': 'switch',
       'entity_category': <EntityCategory.CONFIG: 'config'>,
-      'entity_id': 'switch.air_purifier_600s_child_lock',
+      'entity_id': 'switch.air_purifier_600s_display_lock',
       'has_entity_name': True,
       'hidden_by': None,
       'icon': None,
@@ -437,12 +437,12 @@
       'labels': set({
       }),
       'name': None,
-      'object_id_base': 'Child lock',
+      'object_id_base': 'Display lock',
       'options': dict({
       }),
       'original_device_class': None,
       'original_icon': None,
-      'original_name': 'Child lock',
+      'original_name': 'Display lock',
       'platform': 'vesync',
       'previous_unique_id': None,
       'suggested_object_id': None,
@@ -452,19 +452,6 @@
       'unit_of_measurement': None,
     }),
   ])
-# ---
-# name: test_switch_state[Air Purifier 600s][switch.air_purifier_600s_child_lock]
-  StateSnapshot({
-    'attributes': ReadOnlyDict({
-      <EntityStateAttribute.FRIENDLY_NAME: 'friendly_name'>: 'Air Purifier 600s Child lock',
-    }),
-    'context': <ANY>,
-    'entity_id': 'switch.air_purifier_600s_child_lock',
-    'last_changed': <ANY>,
-    'last_reported': <ANY>,
-    'last_updated': <ANY>,
-    'state': 'off',
-  })
 # ---
 # name: test_switch_state[Air Purifier 600s][switch.air_purifier_600s_display]
   StateSnapshot({
@@ -477,6 +464,19 @@
     'last_reported': <ANY>,
     'last_updated': <ANY>,
     'state': 'on',
+  })
+# ---
+# name: test_switch_state[Air Purifier 600s][switch.air_purifier_600s_display_lock]
+  StateSnapshot({
+    'attributes': ReadOnlyDict({
+      <EntityStateAttribute.FRIENDLY_NAME: 'friendly_name'>: 'Air Purifier 600s Display lock',
+    }),
+    'context': <ANY>,
+    'entity_id': 'switch.air_purifier_600s_display_lock',
+    'last_changed': <ANY>,
+    'last_reported': <ANY>,
+    'last_updated': <ANY>,
+    'state': 'off',
   })
 # ---
 # name: test_switch_state[Air Purifier Vital 200S][devices]
@@ -561,7 +561,7 @@
       'disabled_by': None,
       'domain': 'switch',
       'entity_category': <EntityCategory.CONFIG: 'config'>,
-      'entity_id': 'switch.air_purifier_vital_200s_child_lock',
+      'entity_id': 'switch.air_purifier_vital_200s_display_lock',
       'has_entity_name': True,
       'hidden_by': None,
       'icon': None,
@@ -569,12 +569,12 @@
       'labels': set({
       }),
       'name': None,
-      'object_id_base': 'Child lock',
+      'object_id_base': 'Display lock',
       'options': dict({
       }),
       'original_device_class': None,
       'original_icon': None,
-      'original_name': 'Child lock',
+      'original_name': 'Display lock',
       'platform': 'vesync',
       'previous_unique_id': None,
       'suggested_object_id': None,
@@ -584,19 +584,6 @@
       'unit_of_measurement': None,
     }),
   ])
-# ---
-# name: test_switch_state[Air Purifier Vital 200S][switch.air_purifier_vital_200s_child_lock]
-  StateSnapshot({
-    'attributes': ReadOnlyDict({
-      <EntityStateAttribute.FRIENDLY_NAME: 'friendly_name'>: 'Air Purifier Vital 200S Child lock',
-    }),
-    'context': <ANY>,
-    'entity_id': 'switch.air_purifier_vital_200s_child_lock',
-    'last_changed': <ANY>,
-    'last_reported': <ANY>,
-    'last_updated': <ANY>,
-    'state': 'off',
-  })
 # ---
 # name: test_switch_state[Air Purifier Vital 200S][switch.air_purifier_vital_200s_display]
   StateSnapshot({
@@ -609,6 +596,19 @@
     'last_reported': <ANY>,
     'last_updated': <ANY>,
     'state': 'on',
+  })
+# ---
+# name: test_switch_state[Air Purifier Vital 200S][switch.air_purifier_vital_200s_display_lock]
+  StateSnapshot({
+    'attributes': ReadOnlyDict({
+      <EntityStateAttribute.FRIENDLY_NAME: 'friendly_name'>: 'Air Purifier Vital 200S Display lock',
+    }),
+    'context': <ANY>,
+    'entity_id': 'switch.air_purifier_vital_200s_display_lock',
+    'last_changed': <ANY>,
+    'last_reported': <ANY>,
+    'last_updated': <ANY>,
+    'state': 'off',
   })
 # ---
 # name: test_switch_state[CS158-AF Air Fryer Cooking][devices]
@@ -765,7 +765,7 @@
       'disabled_by': None,
       'domain': 'switch',
       'entity_category': <EntityCategory.CONFIG: 'config'>,
-      'entity_id': 'switch.corebreeze_432s_child_lock',
+      'entity_id': 'switch.corebreeze_432s_display_lock',
       'has_entity_name': True,
       'hidden_by': None,
       'icon': None,
@@ -773,12 +773,12 @@
       'labels': set({
       }),
       'name': None,
-      'object_id_base': 'Child lock',
+      'object_id_base': 'Display lock',
       'options': dict({
       }),
       'original_device_class': None,
       'original_icon': None,
-      'original_name': 'Child lock',
+      'original_name': 'Display lock',
       'platform': 'vesync',
       'previous_unique_id': None,
       'suggested_object_id': None,
@@ -789,19 +789,6 @@
     }),
   ])
 # ---
-# name: test_switch_state[CoreBreeze 432S][switch.corebreeze_432s_child_lock]
-  StateSnapshot({
-    'attributes': ReadOnlyDict({
-      <EntityStateAttribute.FRIENDLY_NAME: 'friendly_name'>: 'CoreBreeze 432S Child lock',
-    }),
-    'context': <ANY>,
-    'entity_id': 'switch.corebreeze_432s_child_lock',
-    'last_changed': <ANY>,
-    'last_reported': <ANY>,
-    'last_updated': <ANY>,
-    'state': 'off',
-  })
-# ---
 # name: test_switch_state[CoreBreeze 432S][switch.corebreeze_432s_display]
   StateSnapshot({
     'attributes': ReadOnlyDict({
@@ -809,6 +796,19 @@
     }),
     'context': <ANY>,
     'entity_id': 'switch.corebreeze_432s_display',
+    'last_changed': <ANY>,
+    'last_reported': <ANY>,
+    'last_updated': <ANY>,
+    'state': 'off',
+  })
+# ---
+# name: test_switch_state[CoreBreeze 432S][switch.corebreeze_432s_display_lock]
+  StateSnapshot({
+    'attributes': ReadOnlyDict({
+      <EntityStateAttribute.FRIENDLY_NAME: 'friendly_name'>: 'CoreBreeze 432S Display lock',
+    }),
+    'context': <ANY>,
+    'entity_id': 'switch.corebreeze_432s_display_lock',
     'last_changed': <ANY>,
     'last_reported': <ANY>,
     'last_updated': <ANY>,
@@ -1101,7 +1101,7 @@
       'disabled_by': None,
       'domain': 'switch',
       'entity_category': <EntityCategory.CONFIG: 'config'>,
-      'entity_id': 'switch.humidifier_6000s_child_lock',
+      'entity_id': 'switch.humidifier_6000s_display_lock',
       'has_entity_name': True,
       'hidden_by': None,
       'icon': None,
@@ -1109,12 +1109,12 @@
       'labels': set({
       }),
       'name': None,
-      'object_id_base': 'Child lock',
+      'object_id_base': 'Display lock',
       'options': dict({
       }),
       'original_device_class': None,
       'original_icon': None,
-      'original_name': 'Child lock',
+      'original_name': 'Display lock',
       'platform': 'vesync',
       'previous_unique_id': None,
       'suggested_object_id': None,
@@ -1243,19 +1243,6 @@
     'state': 'on',
   })
 # ---
-# name: test_switch_state[Humidifier 6000s][switch.humidifier_6000s_child_lock]
-  StateSnapshot({
-    'attributes': ReadOnlyDict({
-      <EntityStateAttribute.FRIENDLY_NAME: 'friendly_name'>: 'Humidifier 6000s Child lock',
-    }),
-    'context': <ANY>,
-    'entity_id': 'switch.humidifier_6000s_child_lock',
-    'last_changed': <ANY>,
-    'last_reported': <ANY>,
-    'last_updated': <ANY>,
-    'state': 'on',
-  })
-# ---
 # name: test_switch_state[Humidifier 6000s][switch.humidifier_6000s_display]
   StateSnapshot({
     'attributes': ReadOnlyDict({
@@ -1267,6 +1254,19 @@
     'last_reported': <ANY>,
     'last_updated': <ANY>,
     'state': 'off',
+  })
+# ---
+# name: test_switch_state[Humidifier 6000s][switch.humidifier_6000s_display_lock]
+  StateSnapshot({
+    'attributes': ReadOnlyDict({
+      <EntityStateAttribute.FRIENDLY_NAME: 'friendly_name'>: 'Humidifier 6000s Display lock',
+    }),
+    'context': <ANY>,
+    'entity_id': 'switch.humidifier_6000s_display_lock',
+    'last_changed': <ANY>,
+    'last_reported': <ANY>,
+    'last_updated': <ANY>,
+    'state': 'on',
   })
 # ---
 # name: test_switch_state[Humidifier 6000s][switch.humidifier_6000s_dry_when_out_of_water]

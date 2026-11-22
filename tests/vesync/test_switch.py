@@ -144,13 +144,13 @@ async def test_turn_on_off_display_raises_error(
         # child_lock switch for humidifier
         (
             "Humidifier 6000s",
-            "switch.humidifier_6000s_child_lock",
+            "switch.humidifier_6000s_display_lock",
             SERVICE_TURN_ON,
             "pyvesync.devices.vesynchumidifier.VeSyncSuperior6000S.toggle_child_lock",
         ),
         (
             "Humidifier 6000s",
-            "switch.humidifier_6000s_child_lock",
+            "switch.humidifier_6000s_display_lock",
             SERVICE_TURN_OFF,
             "pyvesync.devices.vesynchumidifier.VeSyncSuperior6000S.toggle_child_lock",
         ),
