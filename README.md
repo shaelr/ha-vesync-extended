@@ -22,6 +22,7 @@ integration ignores.
 | Off timer | Number | Superior 6000S | 0–12 hours. Shows hours left, rounded up. Set 0 to cancel |
 | Off timer remaining | Sensor | Superior 6000S | Minutes left on the off timer |
 | Total run time | Sensor | Superior 6000S | Lifetime run time in hours (diagnostic) |
+| Reset filter | Button | Superior 6000S | Sets the wick filter life back to 100% |
 | External sensor status | Sensor | Superior 6000S | State of the optional Levoit remote sensor, for example `no_devices` (diagnostic) |
 
 ### Other changes
@@ -34,14 +35,16 @@ integration ignores.
 
 ### Experimental
 
-pyvesync has no commands for the **off timer** or **drying level** on the
-Superior 6000S, so this integration sends them itself, using the same API
+pyvesync has no commands for the **off timer**, **drying level** or
+**filter reset** on the Superior 6000S, so this integration sends them itself, using the same API
 calls other Levoit humidifiers use:
 
 - Off timer tries `addTimerV2` (LV600S style) first and falls back to
   `addTimer` (Classic/OasisMist style). Whichever works is remembered.
 - Drying level sends `setDryingMode` with `dryingLevel`, keeping the current
   drying on/off setting.
+
+- Reset filter sends `resetFilter`, the command Levoit air purifiers use.
 
 If the cloud rejects one, Home Assistant shows an error and nothing changes.
 Turn on debug logging for `custom_components.vesync` to see the reply.

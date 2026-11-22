@@ -147,6 +147,14 @@ async def async_clear_off_timer(device: VeSyncBaseDevice) -> bool:
     return True
 
 
+async def async_reset_filter(device: VeSyncBaseDevice) -> bool:
+    """Reset the wick filter life, using the command air purifiers use."""
+    if await _call(device, "resetFilter", {}) is None:
+        return False
+    device.state.filter_life = 100
+    return True
+
+
 async def async_set_drying_level(device: VeSyncBaseDevice, level: int) -> bool:
     """Set the drying level, keeping the current drying on/off setting."""
     switch = 1 if getattr(device.state, "drying_mode_auto_switch", None) == "on" else 0

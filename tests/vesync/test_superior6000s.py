@@ -7,6 +7,7 @@ import pytest
 from pytest_homeassistant.common import MockConfigEntry
 from pytest_homeassistant.test_util.aiohttp import AiohttpClientMocker
 
+from homeassistant.components.button import DOMAIN as BUTTON_DOMAIN, SERVICE_PRESS
 from homeassistant.components.number import (
     ATTR_VALUE,
     DOMAIN as NUMBER_DOMAIN,
@@ -29,6 +30,8 @@ BYPASS_URL = "https://smartapi.vesync.com/cloud/v2/deviceManaged/bypassV2"
 OFF_TIMER = "number.humidifier_6000s_off_timer"
 OFF_TIMER_REMAINING = "sensor.humidifier_6000s_off_timer_remaining"
 DRYING_LEVEL = "select.humidifier_6000s_drying_level"
+RESET_FILTER = "button.humidifier_6000s_reset_filter"
+FILTER_LIFE = "sensor.humidifier_6000s_filter_lifetime"
 
 
 def _sent(aioclient_mock: AiohttpClientMocker) -> list[tuple[str, dict[str, Any]]]:
@@ -236,3 +239,52 @@ def test_extract_status_ignores_command_replies() -> None:
     assert extract_status(_device({"result": {"code": 0, "result": {}}})) is None
     assert extract_status(_device(None)) is None
     assert extract_status(SimpleNamespace()) is None
+
+
+async def test_reset_filter(
+    hass: HomeAssistant,
+    config_entry: MockConfigEntry,
+    aioclient_mock: AiohttpClientMocker,
+) -> None:
+    """Reset filter sends resetFilter and sets filter life to 100%."""
+    await _setup(hass, config_entry, aioclient_mock)
+    assert hass.states.get(FILTER_LIFE).state == "77"
+    aioclient_mock.mock_calls.clear()
+
+    await hass.services.async_call(
+        BUTTON_DOMAIN,
+        SERVICE_PRESS,
+        {ATTR_ENTITY_ID: RESET_FILTER},
+        blocking=True,
+    )
+
+    assert ("resetFilter", {}) in _sent(aioclient_mock)
+    assert hass.states.get(FILTER_LIFE).state == "100"
+
+
+async def test_reset_filter_rejected(
+    hass: HomeAssistant,
+    config_entry: MockConfigEntry,
+    aioclient_mock: AiohttpClientMocker,
+) -> None:
+    """A rejected reset raises an error and leaves filter life alone."""
+    await _setup(hass, config_entry, aioclient_mock)
+    aioclient_mock.clear_requests()
+    aioclient_mock.post(
+        BYPASS_URL,
+        json={
+            "traceId": "1",
+            "code": 0,
+            "msg": "request success",
+            "result": {"traceId": "1", "code": -1, "result": {}},
+        },
+    )
+
+    with pytest.raises(HomeAssistantError):
+        await hass.services.async_call(
+            BUTTON_DOMAIN,
+            SERVICE_PRESS,
+            {ATTR_ENTITY_ID: RESET_FILTER},
+            blocking=True,
+        )
+    assert hass.states.get(FILTER_LIFE).state == "77"

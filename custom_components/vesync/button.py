@@ -20,6 +20,7 @@ from .common import is_purifier
 from .const import DOMAIN, VS_DEVICES, VS_DISCOVERY
 from .coordinator import VesyncConfigEntry, VeSyncDataCoordinator
 from .entity import VeSyncBaseEntity
+from .extra_entities import button_entities
 
 PARALLEL_UPDATES = 1
 
@@ -62,6 +63,7 @@ async def async_setup_entry(
             for description in BUTTON_DESCRIPTIONS
             if description.supported_fn(dev)
         )
+        async_add_entities(button_entities(devices, coordinator))
 
     config_entry.async_on_unload(
         async_dispatcher_connect(hass, VS_DISCOVERY.format(VS_DEVICES), discover)

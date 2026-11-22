@@ -12,6 +12,7 @@ from typing import Any, override
 
 from pyvesync.base_devices.vesyncbasedevice import VeSyncBaseDevice
 
+from homeassistant.components.button import ButtonEntity
 from homeassistant.components.number import NumberDeviceClass, NumberEntity, NumberMode
 from homeassistant.components.select import SelectEntity
 from homeassistant.components.sensor import (
@@ -32,6 +33,7 @@ from .superior6000s import (
     DRYING_STATES,
     OFF_TIMER_MAX_HOURS,
     async_clear_off_timer,
+    async_reset_filter,
     async_set_drying_level,
     async_set_off_timer,
     is_superior_6000s,
@@ -279,6 +281,36 @@ class VeSyncDryingLevelSelect(VeSyncExtraEntity, SelectEntity):
         self._optimistic(dryingMode=drying)
 
 
+# Filter reset
+
+
+class VeSyncResetFilterButton(VeSyncBaseEntity, ButtonEntity):
+    """Reset the wick filter life to 100%."""
+
+    _attr_translation_key = "reset_filter"
+    _attr_entity_category = EntityCategory.CONFIG
+
+    def __init__(
+        self, device: VeSyncBaseDevice, coordinator: VeSyncDataCoordinator
+    ) -> None:
+        """Initialize the button."""
+        super().__init__(device, coordinator)
+        self._attr_unique_id = f"{self.base_unique_id}-reset_filter"
+
+    @override
+    async def async_press(self) -> None:
+        """Reset the filter life."""
+        if not await async_reset_filter(self.device):
+            raise HomeAssistantError(
+                "The humidifier rejected the filter reset. Enable debug logging "
+                "for custom_components.vesync to see the reply"
+            )
+        status = self.coordinator.extra_status.get(self.device.cid)
+        if status is not None:
+            status["filterLifePercent"] = 100
+        self.coordinator.async_update_listeners()
+
+
 # Factories used by the platform modules
 
 
@@ -320,4 +352,16 @@ def select_entities(
         for dev in devices
         if is_superior_6000s(dev)
         and "dryingLevel" in _drying(_status(dev, coordinator))
+    ]
+
+
+def button_entities(
+    devices: Any, coordinator: VeSyncDataCoordinator
+) -> list[ButtonEntity]:
+    """Return the extra buttons for these devices."""
+    return [
+        VeSyncResetFilterButton(dev, coordinator)
+        for dev in devices
+        if is_superior_6000s(dev)
+        and getattr(dev.state, "filter_life", None) is not None
     ]
