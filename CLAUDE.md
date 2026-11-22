@@ -19,6 +19,8 @@ existing entities, automations and dashboards keep working.
 custom_components/vesync/   the integration (what HACS installs)
   superior6000s.py          raw-status capture + commands pyvesync lacks
   extra_entities.py         all new 6000S entities and their factories
+  card.py                   serves the dashboard card and adds it to the frontend
+  frontend/                 vesync-humidifier-card.js (the dashboard card)
   (everything else)         HA core 2026.11.2 code, plus one-line hooks
 tests/vesync/               HA core's vesync tests + test_superior6000s.py
 scripts/test.sh             runs the tests inside an HA core checkout
@@ -37,6 +39,7 @@ only get small hooks:
 - `switch.py`: the core Auto Off switch (`auto_off_config`, `autoStopSwitch`)
   is skipped for the 6000S. The Levoit app has no such setting for it and
   no command to change it, so the owner asked to hide it.
+- `__init__.py`: one `await async_register_card(hass)` line in `async_setup`.
 - `services.py`: one `async_setup_send_command(hass)` line. The
   `vesync.send_command` developer action (device, method, data) sends any
   bypass V2 command and returns the reply plus the status read right after.
@@ -68,6 +71,16 @@ status. Entities in `extra_entities.py` read
 `coordinator.extra_status[device.cid]` and apply optimistic updates after
 commands.
 
+## Dashboard card
+
+`custom:vesync-humidifier-card` (plain JS, no build step) is styled after the
+VeSync app. `card.py` serves it at `/vesync_extended/vesync-humidifier-card.js`
+and loads it on every dashboard with `?v=<manifest version>`, so bump the
+manifest version when the card changes. It finds the other entities on the
+humidifier's device by translation key. Config: `entity` (required),
+`target_humidity_entity`, `name`, and overrides such as `filter_entity`.
+The owner's Home view uses it with `input_number.target_humidity`.
+
 ## Running tests
 
 ```bash
@@ -82,7 +95,7 @@ tests into it, builds translations, then runs ruff and pytest. The PyPI
 `pytest-homeassistant-custom-component` package stops at HA 2026.2, which is
 why the tests run inside core instead.
 
-Expected: **225 passed**. When the snapshot files change, check the diff only
+Expected: **227 passed**. When the snapshot files change, check the diff only
 adds or changes what you meant to.
 
 If the format check fails, run `.ha-core/.venv/bin/ruff format

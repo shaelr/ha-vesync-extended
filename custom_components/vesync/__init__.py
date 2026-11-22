@@ -17,6 +17,7 @@ from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.device_registry import AnyDeviceEntry
 from homeassistant.helpers.typing import ConfigType
 
+from .card import async_register_card
 from .const import DOMAIN
 from .coordinator import VesyncConfigEntry, VeSyncDataCoordinator
 from .services import async_setup_services
@@ -43,6 +44,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     """Set up my integration."""
 
     async_setup_services(hass)
+    await async_register_card(hass)
 
     return True
 

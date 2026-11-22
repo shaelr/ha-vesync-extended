@@ -1,6 +1,10 @@
 {
   "domain": "vesync",
   "name": "VeSync",
+  "after_dependencies": [
+    "frontend",
+    "http"
+  ],
   "categories": [
     "climate.air_purifiers_humidifiers",
     "plugs_switches",
@@ -34,5 +38,5 @@
   "requirements": [
     "pyvesync>=3.5.1"
   ],
-  "version": "2026.11.2.8"
+  "version": "2026.11.2.9"
 }
