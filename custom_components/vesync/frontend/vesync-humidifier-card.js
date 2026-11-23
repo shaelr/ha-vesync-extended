@@ -16,7 +16,7 @@
  * Served by the VeSync Extended integration; no separate install needed.
  */
 
-const CARD_VERSION = "1.4.0";
+const CARD_VERSION = "1.5.0";
 
 // card config key -> [domain, translation_key]
 const SIBLINGS = {
@@ -29,6 +29,7 @@ const SIBLINGS = {
   display_lock_entity: ["switch", "child_lock"],
   drying_level_entity: ["select", "drying_level"],
   drying_remaining_entity: ["sensor", "drying_time_remaining"],
+  drying_status_entity: ["sensor", "drying_status"],
   off_timer_entity: ["number", "off_timer"],
   off_timer_remaining_entity: ["sensor", "off_timer_remaining"],
   dry_power_off_entity: ["switch", "drying_mode_power_off"],
@@ -51,6 +52,14 @@ const RING_ARC = 0.75; // the ring is a 270° arc, open at the bottom
 
 const esc = (s) =>
   String(s ?? "").replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
+
+// Big ring reading for a countdown: "45 min" under an hour, "1:54 h" above.
+const fmtCountdown = (min) => {
+  if (min === undefined) return { value: "--", unit: "min" };
+  const m = Math.max(0, Math.ceil(min));
+  if (m < 60) return { value: String(m), unit: "min" };
+  return { value: `${Math.floor(m / 60)}:${String(m % 60).padStart(2, "0")}`, unit: "h" };
+};
 
 const fmtMinutes = (min) => {
   const m = Math.max(0, Math.round(min));
@@ -399,10 +408,15 @@ class VeSyncHumidifierCard extends HTMLElement {
       return;
     }
 
-    const on = h.state === "on";
     const unavailable = h.state === "unavailable";
     const { mode } = this._mode();
-    const drying = mode === "dry";
+    // The device also dries on its own: after it's turned off ("Dry Mode:
+    // Power Off") or when the tank runs dry ("Dry Mode: Water Shortage").
+    // It can report power off meanwhile, so drying wins over the power state.
+    const drying =
+      !unavailable && (mode === "dry" || this._state("drying_status_entity")?.state === "drying");
+    const on = h.state === "on" || drying;
+    const poweredOff = h.state !== "on";
     const modes = h.attributes.available_modes || [];
     const name = this._config.name || h.attributes.friendly_name || "Humidifier";
 
@@ -413,6 +427,13 @@ class VeSyncHumidifierCard extends HTMLElement {
     const temp = this._state("temperature_entity");
     const filter = this._num("filter_entity");
     const lowWater = this._isOn("low_water_entity");
+    const dryReason = !drying
+      ? ""
+      : lowWater
+        ? "Out of water"
+        : poweredOff
+          ? "After power off"
+          : "";
     const tankOff = this._isOn("tank_lifted_entity");
     const timerLeft = this._minutesLeft("off_timer_remaining_entity");
     const dryLeft = this._minutesLeft("drying_remaining_entity");
@@ -426,10 +447,12 @@ class VeSyncHumidifierCard extends HTMLElement {
     let centre;
     if (drying) {
       ringFrac = dryLeft !== undefined ? Math.min(1, dryLeft / 120) : 1;
+      const cd = fmtCountdown(dryLeft);
+      const level = this._state("drying_level_entity")?.state === "high" ? "High" : "Low";
       centre = `
-        <div class="ring-label">Dry Mode</div>
-        <div class="big">${dryLeft !== undefined ? Math.ceil(dryLeft) : "--"}<span class="unit">min</span></div>
-        <div class="ring-sub">${esc(this._state("drying_level_entity")?.state === "high" ? "High" : "Low")} · time left</div>`;
+        <div class="ring-label">Drying${dryReason ? ` · ${esc(dryReason)}` : ""}</div>
+        <div class="big">${cd.value}<span class="unit">${cd.unit}</span></div>
+        <div class="ring-sub">${level} · time left</div>`;
     } else {
       ringFrac = humidity !== undefined ? humidity / 100 : 0;
       centre = `
@@ -510,7 +533,7 @@ class VeSyncHumidifierCard extends HTMLElement {
     const modeRow = this._modeList(modes)
       .map(
         (m) => `
-        <button class="mode ${on && mode === m.mode ? "sel" : ""}" data-action="mode" data-value="${m.mode}" ${unavailable ? "disabled" : ""}>
+        <button class="mode ${(drying ? m.mode === "dry" : on && mode === m.mode) ? "sel" : ""}" data-action="mode" data-value="${m.mode}" ${unavailable ? "disabled" : ""}>
           <span class="mode-icon"><ha-icon icon="${m.icon}"></ha-icon></span>
           <span class="mode-label">${m.label}</span>
         </button>`,
@@ -578,28 +601,29 @@ class VeSyncHumidifierCard extends HTMLElement {
     if (this._isCompact()) {
       const bits = [];
       if (unavailable) bits.push("Offline");
-      else if (!on) bits.push("Off");
       else if (drying) {
-        bits.push("Drying");
+        bits.push(dryReason ? `Drying (${dryReason.toLowerCase()})` : "Drying");
         if (dryLeft !== undefined) bits.push(`${fmtMinutes(dryLeft)} left`);
-      } else {
+      } else if (!on) bits.push("Off");
+      else {
         bits.push(modeLabel);
         if (mode === "manual" && mist !== undefined) bits.push(`Mist ${mist}`);
         if (target) bits.push(`Target ${target.value}%`);
       }
-      if (on && timerLeft !== undefined && timerLeft > 0) bits.push(`Off in ${fmtMinutes(timerLeft)}`);
+      if (on && !drying && timerLeft !== undefined && timerLeft > 0) bits.push(`Off in ${fmtMinutes(timerLeft)}`);
       if (temp) {
         bits.push(
           esc(hass.formatEntityState ? hass.formatEntityState(temp) : `${temp.state} ${temp.attributes.unit_of_measurement || ""}`),
         );
       }
+      const miniCd = fmtCountdown(dryLeft);
       const miniValue = drying
-        ? `${dryLeft !== undefined ? Math.round(dryLeft) : "--"}<small>min</small>`
+        ? `${miniCd.value}${miniCd.unit === "min" ? "<small>min</small>" : ""}`
         : `${humidity ?? "--"}<small>%</small>`;
       const compactModes = this._modeList(modes)
         .map(
           (m) => `
-          <button class="mode ${on && mode === m.mode ? "sel" : ""}" data-action="mode" data-value="${m.mode}" ${unavailable ? "disabled" : ""} title="${m.label}" aria-label="${m.label}">
+          <button class="mode ${(drying ? m.mode === "dry" : on && mode === m.mode) ? "sel" : ""}" data-action="mode" data-value="${m.mode}" ${unavailable ? "disabled" : ""} title="${m.label}" aria-label="${m.label}">
             <span class="mode-icon"><ha-icon icon="${m.icon}"></ha-icon></span>
           </button>`,
         )
@@ -608,7 +632,7 @@ class VeSyncHumidifierCard extends HTMLElement {
         <style>${STYLE}</style>
         <ha-card class="card compact ${on ? "is-on" : "is-off"} ${drying ? "is-dry" : ""}">
           <div class="c-row">
-            <button class="mini" data-action="more-info" data-value="humidifier" aria-label="Humidity">
+            <button class="mini" data-action="more-info" data-value="humidifier" aria-label="${drying ? "Drying time left" : "Humidity"}">
               <svg viewBox="0 0 220 220" class="ring">
                 ${gradient}
                 <circle class="track" cx="110" cy="110" r="${RING_R}"
@@ -616,13 +640,13 @@ class VeSyncHumidifierCard extends HTMLElement {
                 <circle class="value" cx="110" cy="110" r="${RING_R}"
                   stroke-dasharray="${fill} ${RING_C}" transform="rotate(135 110 110)"/>
               </svg>
-              <span class="mini-val">${miniValue}</span>
+              <span class="mini-val ${drying ? "dry" : ""}">${miniValue}</span>
             </button>
             <div class="title">
               <div class="name">${esc(name)}</div>
               <div class="status">${bits.join(" · ")}</div>
             </div>
-            <button class="power ${on ? "on" : ""}" data-action="power" ${unavailable ? "disabled" : ""} aria-label="Power">
+            <button class="power ${poweredOff ? "" : "on"}" data-action="power" ${unavailable ? "disabled" : ""} aria-label="Power">
               <ha-icon icon="mdi:power"></ha-icon>
             </button>
           </div>
@@ -644,11 +668,11 @@ class VeSyncHumidifierCard extends HTMLElement {
         <div class="top">
           <div class="title">
             <div class="name">${esc(name)}</div>
-            <div class="status">${unavailable ? "Offline" : on ? esc(MODES.find((m) => m.mode === mode)?.label || mode || "On") : "Off"}</div>
+            <div class="status">${unavailable ? "Offline" : drying ? "Drying" : on ? esc(MODES.find((m) => m.mode === mode)?.label || mode || "On") : "Off"}</div>
           </div>
           <div class="top-actions">
             ${expandable ? `<button class="expand" data-action="expand" aria-label="Show less"><ha-icon icon="mdi:chevron-up"></ha-icon></button>` : ""}
-            <button class="power ${on ? "on" : ""}" data-action="power" ${unavailable ? "disabled" : ""} aria-label="Power">
+            <button class="power ${poweredOff ? "" : "on"}" data-action="power" ${unavailable ? "disabled" : ""} aria-label="Power">
               <ha-icon icon="mdi:power"></ha-icon>
             </button>
           </div>
@@ -777,6 +801,7 @@ const SIBLING_LABELS = {
   display_lock_entity: "Display lock",
   drying_level_entity: "Drying level",
   drying_remaining_entity: "Drying time remaining",
+  drying_status_entity: "Drying status",
   off_timer_entity: "Off timer",
   off_timer_remaining_entity: "Off timer remaining",
   dry_power_off_entity: "Dry Mode: Power Off",
@@ -936,6 +961,7 @@ const STYLE = `
     position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
     font-size: 16px; font-weight: 500; font-variant-numeric: tabular-nums;
   }
+  .mini-val.dry { font-size: 14px; }
   .mini-val small { font-size: 10px; color: var(--vs-dim); margin-left: 1px; }
   .compact .alert { margin: 10px 0 0; padding: 8px 12px; font-size: 13px; }
   .c-bottom { display: flex; align-items: center; gap: 8px; margin-top: 10px; }
