@@ -80,8 +80,8 @@ manifest version when the card changes. It finds the other entities on the
 humidifier's device by translation key. Config: `entity` (required),
 `target_humidity_entity`, `humidity_entity` (the ring reading), `name`,
 `layout` (`full`, `compact`, or `expandable`: compact with a chevron to open
-the full card; the open state isn't saved), `humidity_automation`, and
-overrides such as `filter_entity`. It has a visual editor (`ha-form`). It uses
+the full card; the open state isn't saved), `humidity_automation`,
+`display_lock_automation`, and overrides such as `filter_entity`. It has a visual editor (`ha-form`). It uses
 the theme's card background and text colours (the owner didn't want the app's
 blue background). The owner's Home view uses it with
 `input_number.target_humidity` and `sensor.average_humidity`.
@@ -94,6 +94,15 @@ Manual and turns the automation on
 from the average against the target, only while in Manual). The Humidity
 button is the device's own mode. Any mode other than Average turns the
 automation off. Manual + automation on shows as Average.
+
+`display_lock_automation` adds an **Auto Lock** tile that turns that
+automation on or off (turning it on also locks the display at once). The
+device has no auto-lock setting of its own, and it unlocks the display after
+a refill and power-on. The owner's automation
+`automation.humidifier_auto_display_lock` turns `switch.humidifier_child_lock`
+on immediately when it reads off, when the humidifier turns on, and when
+low water clears. The last two re-send the lock even if the cloud still says
+locked, because the cloud lags.
 
 ## Running tests
 

@@ -54,8 +54,9 @@ entity: humidifier.humidifier
 
 It finds the humidifier's other entities by itself and has a visual editor.
 Options include `layout` (`full`, `compact` or `expandable`),
-`target_humidity_entity`, `humidity_entity`, `name` and
-`humidity_automation`.
+`target_humidity_entity`, `humidity_entity`, `name`,
+`humidity_automation` and `display_lock_automation` (adds an Auto Lock tile
+that turns an automation of yours, one that relocks the display, on or off).
 
 ### Developer action
 

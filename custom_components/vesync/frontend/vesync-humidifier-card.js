@@ -8,6 +8,7 @@
  *   humidity_entity: sensor.average_humidity               # optional, ring reading
  *   layout: full | compact | expandable                    # optional, default full
  *   humidity_automation: automation.x                      # optional, see _mode()
+ *   display_lock_automation: automation.y                  # optional, Auto Lock tile
  *
  * The other entities (mist level, filter, timer, drying ...) are found on the
  * same device by their translation key, so renamed entity ids keep working.
@@ -16,7 +17,7 @@
  * Served by the VeSync Extended integration; no separate install needed.
  */
 
-const CARD_VERSION = "1.5.0";
+const CARD_VERSION = "1.6.0";
 
 // card config key -> [domain, translation_key]
 const SIBLINGS = {
@@ -172,6 +173,7 @@ class VeSyncHumidifierCard extends HTMLElement {
     ids.humidity_entity = cfg.humidity_entity;
     ids.target_humidity_entity = cfg.target_humidity_entity;
     ids.humidity_automation = cfg.humidity_automation;
+    ids.display_lock_automation = cfg.display_lock_automation;
     return ids;
   }
 
@@ -240,6 +242,18 @@ class VeSyncHumidifierCard extends HTMLElement {
     }
   }
 
+  // With display_lock_automation set, the Auto Lock tile turns that automation
+  // (which relocks the display whenever it unlocks) on or off. Turning it on
+  // also locks the display straight away.
+  async _setAutoLock(on) {
+    const auto = this._ids.display_lock_automation;
+    if (!auto) return;
+    await this._call("automation", on ? "turn_on" : "turn_off", { entity_id: auto });
+    if (on && this._ids.display_lock_entity && !this._error) {
+      await this._call("switch", "turn_on", { entity_id: this._ids.display_lock_entity });
+    }
+  }
+
   // The mode to show. Manual with the humidity automation on shows as Average.
   _mode() {
     const raw = this._state("humidifier")?.attributes.mode;
@@ -298,6 +312,9 @@ class VeSyncHumidifierCard extends HTMLElement {
         break;
       case "toggle":
         this._call("switch", "toggle", { entity_id: ids[v] });
+        break;
+      case "auto-lock":
+        this._setAutoLock(!this._isOn("display_lock_automation"));
         break;
       case "more-info":
         this.dispatchEvent(
@@ -555,6 +572,16 @@ class VeSyncHumidifierCard extends HTMLElement {
     }
     if (this._ids.display_lock_entity) {
       tiles.push(this._switchTile("display_lock_entity", "mdi:lock-outline", "Display Lock"));
+    }
+    if (this._ids.display_lock_automation) {
+      const st = this._state("display_lock_automation");
+      const on = st?.state === "on";
+      tiles.push(`
+        <button class="tile ${on ? "on" : ""}" data-action="auto-lock" ${!st || st.state === "unavailable" ? "disabled" : ""}>
+          <ha-icon icon="mdi:lock-clock"></ha-icon>
+          <span class="tile-name">Auto Lock</span>
+          <span class="tile-state">${on ? "On" : "Off"}</span>
+        </button>`);
     }
     if (this._ids.off_timer_entity) {
       const running = timerLeft !== undefined && timerLeft > 0;
@@ -816,6 +843,8 @@ const EDITOR_LABELS = {
   target_humidity_entity: "Target humidity helper (optional)",
   humidity_automation:
     "Average mode automation (optional: adds an Average button that runs Manual with this automation on)",
+  display_lock_automation:
+    "Auto lock automation (optional: adds an Auto Lock tile that turns this automation on or off)",
   temperature_entity: "Temperature (optional)",
   ...SIBLING_LABELS,
 };
@@ -842,6 +871,10 @@ const EDITOR_SCHEMA = [
   },
   {
     name: "humidity_automation",
+    selector: { entity: { domain: "automation" } },
+  },
+  {
+    name: "display_lock_automation",
     selector: { entity: { domain: "automation" } },
   },
   {
@@ -1047,7 +1080,7 @@ const STYLE = `
   .mode.sel .mode-label { color: var(--vs-text); font-weight: 500; }
   .mode[data-value="dry"].sel .mode-icon { background: var(--vs-dry); color: #2b1600; }
 
-  .tiles { display: grid; gap: 8px; grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .tiles { display: grid; gap: 8px; grid-template-columns: repeat(auto-fit, minmax(64px, 1fr)); }
   .row {
     width: 100%; display: flex; align-items: center; gap: 10px; margin-top: 8px;
     padding: 12px; border-radius: 16px; background: var(--vs-surface); text-align: left; font-size: 13px; font-weight: 500;
